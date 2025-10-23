@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atividades Extra - Ciente IE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+    .aba { cursor: pointer; padding: 0.75rem 1.5rem; border-radius: 9999px; transition: 0.2s; }
+    .aba.active { background-color: #2563eb; color: white; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; margin-bottom: 1rem; }
+    .btn { background-color: #2563eb; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .btn:hover { background-color: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background-color: #eff6ff; color: #1e3a8a; }
+    tr:nth-child(even) { background-color: #f9fafb; }
+    /* Modal */
+    #modalDetalhes { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 50; }
+    #modalConteudo { background: white; padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  </style>
+</head>
+
+<body class="p-4">
+  <header class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-blue-600">Atividades Extra — Ciente IE</h1>
+    <nav class="flex gap-2">
+      <span class="aba active" id="abaAtletas" onclick="mostrarAba('atletas')">Atletas</span>
+      <span class="aba" id="abaDiagnostico" onclick="mostrarAba('diagnostico')">Diagnóstico</span>
+      <span class="aba" id="abaHistorico" onclick="mostrarAba('historico')">Atividades Extra</span>
+    </nav>
+  </header>
+
+  <!-- 🧍‍♂️ ABA ATLETAS -->
+  <section id="aba-atletas">
+    <h2 class="text-lg font-semibold mb-3 text-blue-600">Selecione um atleta</h2>
+    <div class="flex gap-3 items-center mb-4">
+      <select id="selectAtleta" class="p-2 border rounded-md min-w-[250px]">
+        <option value="">-- Escolha o atleta --</option>
+      </select>
+      <button id="btnNovoDiag" class="btn hidden" onclick="abrirDiagnostico()">Cadastrar Diagnóstico</button>
+    </div>
+  </section>
+
+  <!-- 🩺 ABA DIAGNÓSTICO -->
+  <section id="aba-diagnostico" class="hidden">
+    <h2 class="text-lg font-semibold mb-2 text-blue-600">Cadastrar Diagnóstico</h2>
+    <p id="nomeAtletaSel" class="text-sm mb-4 text-gray-600 italic"></p>
+    <form id="formDiagnostico" class="space-y-4">
+
+      <!-- Assimetria -->
+      <div class="card">
+        <h3 class="font-semibold mb-2">Assimetria Muscular (Relação Isquiotibiais/Quadríceps)</h3>
+        <div class="flex gap-4 mb-2">
+          <label><input type="checkbox" name="hq" value="Direita"> Direita</label>
+          <label><input type="checkbox" name="hq" value="Esquerda"> Esquerda</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="font-semibold mb-2">Assimetria Muscular (Diferença entre Pernas)</h3>
+        <p class="text-sm text-gray-600 mb-1">Selecione a(s) perna(s) <b>mais fraca(s)</b> e os músculos afetados:</p>
+        <div class="flex gap-4 mb-2">
+          <label><input type="checkbox" name="perna" value="Direita"> Direita</label>
+          <label><input type="checkbox" name="perna" value="Esquerda"> Esquerda</label>
+        </div>
+        <div class="flex flex-wrap gap-4">
+          <label><input type="checkbox" name="musculo" value="Isquiotibiais"> Isquiotibiais</label>
+          <label><input type="checkbox" name="musculo" value="Quadríceps"> Quadríceps</label>
+          <label><input type="checkbox" name="musculo" value="Gastrocnêmio"> Gastrocnêmio</label>
+        </div>
+      </div>
+
+      <!-- Mobilidade -->
+      <div class="card">
+        <h3 class="font-semibold mb-2">Baixa Mobilidade</h3>
+        <div class="flex flex-wrap gap-4 mb-2">
+          <label><input type="checkbox" name="mobilidade" value="Quadril"> Quadril</label>
+          <label><input type="checkbox" name="mobilidade" value="Joelho"> Joelho</label>
+          <label><input type="checkbox" name="mobilidade" value="Tornozelo"> Tornozelo</label>
+        </div>
+        <div class="flex gap-4">
+          <label><input type="checkbox" name="lado-mob" value="Direito"> Direito</label>
+          <label><input type="checkbox" name="lado-mob" value="Esquerdo"> Esquerdo</label>
+        </div>
+      </div>
+
+      <!-- Encurtamento -->
+      <div class="card">
+        <h3 class="font-semibold mb-2">Encurtamento Muscular</h3>
+        <div class="flex flex-wrap gap-4 mb-2">
+          <label><input type="checkbox" name="encurtamento" value="Lombar"> Lombar</label>
+          <label><input type="checkbox" name="encurtamento" value="Isquiotibiais"> Isquiotibiais</label>
+          <label><input type="checkbox" name="encurtamento" value="Quadríceps"> Quadríceps</label>
+          <label><input type="checkbox" name="encurtamento" value="Gastrocnêmio"> Gastrocnêmio</label>
+        </div>
+        <div class="flex gap-4">
+          <label><input type="checkbox" name="lado-enc" value="Direito"> Direito</label>
+          <label><input type="checkbox" name="lado-enc" value="Esquerdo"> Esquerdo</label>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button type="button" class="btn" onclick="gerarTreinoESalvar()">Gerar e Salvar</button>
+        <button type="button" class="btn bg-gray-400 hover:bg-gray-500" onclick="mostrarAba('atletas')">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 📜 ABA ATIVIDADES EXTRA -->
+  <section id="aba-historico" class="hidden">
+    <h2 class="text-lg font-semibold mb-3 text-blue-600">Atividades Extra</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Atleta</th>
+          <th>Diagnóstico</th>
+          <th>Data</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaHistorico"></tbody>
+    </table>
+  </section>
+
+  <!-- Modal -->
+  <div id="modalDetalhes" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div id="modalConteudo"></div>
+  </div>
+
+  <footer class="text-center mt-8 text-sm text-gray-500">Powered by <span class="font-semibold text-blue-600">Ciente IE</span></footer>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDsoutLk5gmxq5zlu548HWFrox37u1zrxk",
+  authDomain: "appintegrado-ciente.firebaseapp.com",
+  projectId: "appintegrado-ciente",
+  storageBucket: "appintegrado-ciente.appspot.com",
+  messagingSenderId: "487559108410",
+  appId: "1:487559108410:web:08868011454e609ee52203"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const exercicios = {
+  "Quadril": [
+    { nome: "90/90 Quadril", series: "3x10", img: "9090_quadril.jpg" },
+    { nome: "Pigeon Stretch", series: "3x30s", img: "pigeon_stretch.jpg" }
+  ],
+  "Joelho": [
+    { nome: "Isometria de Parede", series: "3x30s", img: "isometria_parede.jpg" },
+    { nome: "Extensão Controlada", series: "3x12", img: "extensao_joelho.jpg" }
+  ],
+  "Tornozelo": [
+    { nome: "Mobilização de Tornozelo", series: "3x15", img: "mobilizacao_tornozelo.jpg" },
+    { nome: "Ponte de Panturrilha", series: "3x20", img: "ponte_panturrilha.jpg" }
+  ],
+  "Isquiotibiais": [
+    { nome: "Nordic Curl", series: "3x8", img: "nordic_curl.jpg" },
+    { nome: "Flexão Nórdica Parcial", series: "3x10", img: "flexao_nordica.jpg" }
+  ],
+  "Quadríceps": [
+    { nome: "Couch Stretch", series: "3x30s", img: "couch_stretch.jpg" },
+    { nome: "Step-Up Unilateral", series: "3x10", img: "step_up_unilateral.jpg" }
+  ],
+  "Gastrocnêmio": [
+    { nome: "Alongamento de Panturrilha", series: "3x30s", img: "alongamento_panturrilha.jpg" },
+    { nome: "Ponte de Panturrilha", series: "3x20", img: "ponte_panturrilha.jpg" }
+  ],
+  "Lombar": [
+    { nome: "Extensão Lombar", series: "3x12", img: "extensao_lombar.jpg" },
+    { nome: "Prancha Estática", series: "3x30s", img: "prancha_estatica.jpg" }
+  ]
+};
+
+let atletaSelecionado=null, atletaId=null;
+
+function mostrarAba(nome){
+  ['atletas','diagnostico','historico'].forEach(a=>{
+    document.getElementById('aba-'+a).classList.add('hidden');
+    document.getElementById('aba'+a.charAt(0).toUpperCase()+a.slice(1)).classList.remove('active');
+  });
+  document.getElementById('aba-'+nome).classList.remove('hidden');
+  document.getElementById('aba'+nome.charAt(0).toUpperCase()+nome.slice(1)).classList.add('active');
+  if(nome==='atletas') carregarAtletas();
+  if(nome==='historico') carregarHistorico();
+}
+
+async function carregarAtletas(){
+  const snap=await db.collection('prontidao').get();
+  const select=document.getElementById('selectAtleta');
+  select.innerHTML='<option value="">-- Escolha o atleta --</option>';
+  const nomes=new Set();
+  snap.forEach(doc=>{
+    const a=doc.data();
+    if(a.nome_atleta && !nomes.has(a.nome_atleta)){
+      nomes.add(a.nome_atleta);
+      const op=document.createElement('option');
+      op.value=doc.id;
+      op.textContent=a.nome_atleta;
+      select.appendChild(op);
+    }
+  });
+}
+
+document.getElementById('selectAtleta').addEventListener('change',()=>{
+  const val=document.getElementById('selectAtleta').value;
+  const nome=document.querySelector('#selectAtleta option:checked').textContent;
+  const btn=document.getElementById('btnNovoDiag');
+  if(val){ atletaSelecionado=nome; atletaId=val; btn.classList.remove('hidden'); }
+  else btn.classList.add('hidden');
+});
+
+function abrirDiagnostico(){
+  document.getElementById('nomeAtletaSel').textContent='Atleta selecionado: '+atletaSelecionado;
+  mostrarAba('diagnostico');
+}
+
+function gerarTreinoESalvar(){
+  const form=new FormData(document.getElementById('formDiagnostico'));
+  const d={};for(let[k,v]of form.entries()){if(!d[k])d[k]=[];d[k].push(v);}
+  let descricoes=[];let treino=[];
+  for(const [k,valores] of Object.entries(d)){
+    valores.forEach(v=>{
+      descricoes.push(v);
+      if(exercicios[v]) treino.push(...exercicios[v]);
+    });
+  }
+  const dado={ atleta:atletaId, nome_atleta:atletaSelecionado, data:new Date().toLocaleDateString('pt-BR'),
+    diagnosticos:descricoes, treino_gerado:treino };
+  db.collection('treinos_extras').add(dado).then(()=>{
+    alert('✅ Atividade Extra salva com sucesso!');
+    document.getElementById('formDiagnostico').reset();
+    mostrarAba('historico');
+  });
+}
+
+async function carregarHistorico(){
+  const snap=await db.collection('treinos_extras').get();
+  const t=document.getElementById('tabelaHistorico');t.innerHTML='';
+  snap.forEach((d)=>{
+    const x=d.data();
+    const diagnosticos=(x.diagnosticos||[]).join(', ');
+    const id=d.id;
+    t.innerHTML+=`<tr>
+      <td>${x.nome_atleta}</td>
+      <td>${diagnosticos}</td>
+      <td>${x.data}</td>
+      <td><button class="text-blue-600 underline" onclick="abrirModal('${id}')">Ver Detalhes</button></td>
+    </tr>`;
+    modalCache[id]=x;
+  });
+}
+
+const modalCache={};
+function abrirModal(id){
+  const x=modalCache[id];
+  const c=document.getElementById('modalConteudo');
+  c.innerHTML=`<h2 class='text-xl font-semibold mb-2 text-blue-600'>${x.nome_atleta}</h2>
+  <p class='text-sm text-gray-600 mb-3'>${x.data} — ${x.diagnosticos.join(', ')}</p>
+  ${x.treino_gerado.map(e=>`
+    <div class='mb-4 text-center'>
+      <img src='https://ciente-ie.github.io/avaliacoes/img/exercicios/${e.img}' class='w-full rounded mb-1'>
+      <p class='font-semibold text-gray-800'>${e.nome}</p>
+      <p class='text-sm text-gray-600'>${e.series}</p>
+    </div>`).join('')}
+  <button class='btn w-full mt-2' onclick='fecharModal()'>Fechar</button>`;
+  document.getElementById('modalDetalhes').style.display='flex';
+}
+function fecharModal(){ document.getElementById('modalDetalhes').style.display='none'; }
+
+window.onload=()=>carregarAtletas();
+</script>
+</body>
+</html>
