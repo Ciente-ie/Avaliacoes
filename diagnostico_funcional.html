@@ -2,27 +2,24 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Diagnóstico Funcional - Ciente IE</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
   <style>
-    body{font-family:'Inter',sans-serif;background:#f8fafc}
-    .aba{cursor:pointer;padding:.75rem 1.5rem;border-radius:9999px;transition:.2s}
-    .aba.active{background-color:#2563eb;color:#fff}
-    .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:1rem;margin-bottom:1rem}
-    .btn{background-color:#2563eb;color:#fff;padding:.5rem 1rem;border-radius:8px;cursor:pointer;transition:.2s}
-    .btn:hover{background-color:#1d4ed8}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:.75rem;text-align:left;border-bottom:1px solid #e5e7eb}
-    th{background-color:#eff6ff;color:#1e3a8a}
-    tr:nth-child(even){background-color:#f9fafb}
-    .modal{display:none}
-    .modal.show{display:flex}
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+    .aba { cursor: pointer; padding: .75rem 1.5rem; border-radius: 9999px; transition: .2s; }
+    .aba.active { background-color: #2563eb; color: white; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; margin-bottom: 1rem; }
+    .btn { background-color: #2563eb; color: white; padding: .5rem 1rem; border-radius: 8px; cursor: pointer; transition: .2s; }
+    .btn:hover { background-color: #1d4ed8; }
+    .modal { display: none; }
+    .modal.show { display: flex; }
   </style>
 </head>
+
 <body class="p-4">
   <header class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-blue-600">Diagnóstico Funcional — Ciente IE</h1>
@@ -34,34 +31,31 @@
     </nav>
   </header>
 
-  <!-- ABA ATLETAS -->
+  <!-- 🧍 ATLETAS -->
   <section id="aba-atletas">
     <h2 class="text-lg font-semibold mb-3 text-blue-600">Selecione um atleta</h2>
     <div class="flex gap-3 items-center mb-4">
-      <select id="selectAtleta" class="p-2 border rounded-md min-w-[260px]">
+      <select id="selectAtleta" class="p-2 border rounded-md min-w-[250px]">
         <option value="">-- Escolha o atleta --</option>
       </select>
       <button id="btnNovoDiag" class="btn hidden" onclick="abrirDiagnostico()">Cadastrar Diagnóstico</button>
     </div>
   </section>
 
-  <!-- ABA DIAGNÓSTICO -->
+  <!-- 🩺 DIAGNÓSTICO -->
   <section id="aba-diagnostico" class="hidden">
     <h2 class="text-lg font-semibold mb-2 text-blue-600">Cadastrar Diagnóstico</h2>
     <p id="nomeAtletaSel" class="text-sm mb-4 text-gray-600 italic"></p>
 
     <form id="formDiagnostico" class="space-y-4">
-      <!-- Assimetria Relação HQ -->
       <div class="card">
         <h3 class="font-semibold mb-2">Assimetria Muscular (Relação Isquiotibiais / Quadríceps)</h3>
         <div class="flex gap-4">
           <label><input type="checkbox" name="hq" value="Direita"> Perna Direita</label>
           <label><input type="checkbox" name="hq" value="Esquerda"> Perna Esquerda</label>
         </div>
-        <p class="text-xs text-gray-500 mt-1">Obs.: aqui só lado (Direita/Esquerda).</p>
       </div>
 
-      <!-- Assimetria Diferença Entre Pernas -->
       <div class="card">
         <h3 class="font-semibold mb-2">Assimetria Muscular (Diferença entre Pernas)</h3>
         <div class="flex gap-4 mb-2">
@@ -76,7 +70,6 @@
         </div>
       </div>
 
-      <!-- Baixa Mobilidade -->
       <div class="card">
         <h3 class="font-semibold mb-2">Baixa Mobilidade</h3>
         <div class="flex flex-wrap gap-4 mb-2">
@@ -90,7 +83,6 @@
         </div>
       </div>
 
-      <!-- Encurtamento Muscular -->
       <div class="card">
         <h3 class="font-semibold mb-2">Encurtamento Muscular</h3>
         <div class="flex flex-wrap gap-4 mb-2">
@@ -113,9 +105,9 @@
     </form>
   </section>
 
-  <!-- ABA TREINOS SUGERIDOS -->
+  <!-- 💪 TREINOS -->
   <section id="aba-treinos" class="hidden">
-    <h2 class="text-lg font-semibold mb-3 text-blue-600">Treino Oficial (gerado automaticamente)</h2>
+    <h2 class="text-lg font-semibold mb-3 text-blue-600">Treino Oficial</h2>
     <div id="treinoOficial" class="space-y-3 mb-6"></div>
 
     <h2 class="text-lg font-semibold mb-3 text-blue-600">Outros Exercícios Disponíveis</h2>
@@ -127,28 +119,33 @@
     </div>
   </section>
 
-  <!-- ABA ATIVIDADES EXTRA -->
-  <section id="aba-historico" class="hidden">
-    <h2 class="text-lg font-semibold mb-3 text-blue-600">Atividades Extra</h2>
-    <table>
-      <thead>
-        <tr><th>Atleta</th><th>Data</th><th>Ações</th></tr>
-      </thead>
-      <tbody id="tabelaHistorico"></tbody>
-    </table>
-  </section>
+  <!-- 📜 HISTÓRICO -->
+<section id="aba-historico" class="hidden">
+  <h2 class="text-lg font-semibold mb-3 text-blue-600">Atividades Extra</h2>
 
-  <!-- MODAL DETALHES -->
+  <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+    <table class="min-w-full border-collapse">
+      <thead class="bg-blue-50 border-b">
+        <tr>
+          <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Atleta</th>
+          <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Data</th>
+          <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaHistorico" class="divide-y divide-gray-200 text-sm text-gray-700">
+        <!-- Linhas carregadas dinamicamente -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+  <!-- MODAL -->
   <div id="modalDetalhes" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center">
     <div id="modalConteudo" class="bg-white rounded-lg p-4 max-w-lg w-full max-h-[80vh] overflow-y-auto"></div>
   </div>
 
-  <footer class="text-center mt-8 text-sm text-gray-500">
-    Powered by <span class="font-semibold text-blue-600">Ciente IE</span>
-  </footer>
-
 <script>
-/* ===== Firebase ===== */
+/* 🔥 Firebase */
 const firebaseConfig = {
   apiKey: "AIzaSyDsoutLk5gmxq5zlu548HWFrox37u1zrxk",
   authDomain: "appintegrado-ciente.firebaseapp.com",
@@ -157,15 +154,15 @@ const firebaseConfig = {
   messagingSenderId: "487559108410",
   appId: "1:487559108410:web:08868011454e609ee52203"
 };
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ===== Estado global ===== */
+/* ⚙️ Estado */
 let atletaSelecionado = null;
-let treinoGerado = []; // [{ categoria, exercicios:[{nome, series, freq, tipo}] }]
+let treinoGerado = [];
 const IMG_BASE = "https://ciente-ie.github.io/avaliacoes/img/exercicios/";
 
-/* ===== Util ===== */
+/* 🧭 Abas */
 function mostrarAba(nome){
   ["atletas","diagnostico","treinos","historico"].forEach(a=>{
     document.getElementById("aba-"+a).classList.add("hidden");
@@ -207,146 +204,105 @@ function abrirDiagnostico(){
   mostrarAba("diagnostico");
 }
 
-/* ===== Banco ~40 exercícios (prioriza unilaterais / isométricos / mobilidade com força) ===== */
+/* 🏋️ Banco de exercícios */
 const exerciciosBase = {
   "Quadril": [
     {nome:"90/90 Mobilidade", tipo:"mobilidade", series:"3x10", freq:"2x/semana"},
-    {nome:"Ponte Unilateral", tipo:"unilateral", series:"3x10", freq:"2x/semana"},
     {nome:"Cossack Squat", tipo:"mobilidade", series:"3x10", freq:"2x/semana"},
-    {nome:"Abdução com Elástico", tipo:"isometrico", series:"3x30s", freq:"2x/semana"},
-    {nome:"Elevação Pélvica Unilateral", tipo:"unilateral", series:"3x12", freq:"2x/semana"}
+    {nome:"Ponte Unilateral", tipo:"unilateral", series:"3x10", freq:"2x/semana"},
+    {nome:"Alongamento Pigeon", tipo:"alongamento", series:"3x30s", freq:"2x/semana"}
   ],
   "Joelho": [
     {nome:"Isometria na Parede", tipo:"isometrico", series:"3x30s", freq:"2x/semana"},
     {nome:"Step-up Unilateral", tipo:"unilateral", series:"3x10", freq:"2x/semana"},
     {nome:"Lunge Estático", tipo:"isometrico", series:"3x30s", freq:"2x/semana"},
-    {nome:"Agachamento Unilateral", tipo:"unilateral", series:"3x8", freq:"2x/semana"},
-    {nome:"Split Squat", tipo:"unilateral", series:"3x8", freq:"2x/semana"}
+    {nome:"Alongamento de Quadríceps", tipo:"alongamento", series:"3x30s", freq:"2x/semana"}
   ],
   "Tornozelo": [
-    {nome:"Ponte de Panturrilha Unilateral", tipo:"unilateral", series:"3x15", freq:"2x/semana"},
     {nome:"Mobilização de Tornozelo", tipo:"mobilidade", series:"3x15", freq:"2x/semana"},
-    {nome:"Isometria de Panturrilha", tipo:"isometrico", series:"3x30s", freq:"2x/semana"},
     {nome:"Equilíbrio Unipodal", tipo:"unilateral", series:"3x30s", freq:"2x/semana"},
-    {nome:"Alcance em Y Unipodal", tipo:"unilateral", series:"3x8", freq:"2x/semana"}
+    {nome:"Alongamento de Panturrilha", tipo:"alongamento", series:"3x30s", freq:"2x/semana"}
   ],
   "Glúteo": [
     {nome:"Ponte de Glúteo Unilateral", tipo:"unilateral", series:"3x10", freq:"2x/semana"},
-    {nome:"Clamshell", tipo:"unilateral", series:"3x15", freq:"2x/semana"},
     {nome:"Abdução com Elástico", tipo:"isometrico", series:"3x30s", freq:"2x/semana"},
-    {nome:"Kickback de Glúteo", tipo:"mobilidade", series:"3x12", freq:"2x/semana"},
-    {nome:"Passada Lateral com Mini Band", tipo:"mobilidade", series:"3x12", freq:"2x/semana"}
-  ],
-  "Quadríceps": [
-    {nome:"Couch Stretch", tipo:"mobilidade", series:"3x30s", freq:"2x/semana"},
-    {nome:"Agachamento Isométrico", tipo:"isometrico", series:"3x40s", freq:"2x/semana"},
-    {nome:"Lunge Lateral", tipo:"mobilidade", series:"3x10", freq:"2x/semana"},
-    {nome:"Step-down Unilateral", tipo:"unilateral", series:"3x8", freq:"2x/semana"},
-    {nome:"Split Squat Búlgaro", tipo:"unilateral", series:"3x8", freq:"2x/semana"}
+    {nome:"Couch Stretch", tipo:"alongamento", series:"3x30s", freq:"2x/semana"}
   ],
   "Isquiotibiais": [
-    {nome:"Nordic Curl Parcial", tipo:"isometrico", series:"3x8", freq:"2x/semana"},
+    {nome:"Nordic Curl", tipo:"isometrico", series:"3x8", freq:"2x/semana"},
     {nome:"Good Morning Unilateral", tipo:"unilateral", series:"3x10", freq:"2x/semana"},
-    {nome:"Flexão Nórdica Isométrica", tipo:"isometrico", series:"3x20s", freq:"2x/semana"},
-    {nome:"Peso Morto Unilateral", tipo:"unilateral", series:"3x8", freq:"2x/semana"},
-    {nome:"Bridge Walkouts", tipo:"mobilidade", series:"3x8", freq:"2x/semana"}
-  ],
-  "Gastrocnêmio": [
-    {nome:"Alongamento de Panturrilha", tipo:"mobilidade", series:"3x30s", freq:"2x/semana"},
-    {nome:"Elevação de Panturrilha Unilateral", tipo:"unilateral", series:"3x15", freq:"2x/semana"},
-    {nome:"Isometria de Panturrilha em Pé", tipo:"isometrico", series:"3x30s", freq:"2x/semana"},
-    {nome:"Panturrilha Excêntrica Unilateral", tipo:"unilateral", series:"3x12", freq:"2x/semana"}
+    {nome:"Alongamento Isquiotibiais", tipo:"alongamento", series:"3x30s", freq:"2x/semana"}
   ],
   "Lombar": [
     {nome:"Prancha Estática", tipo:"isometrico", series:"3x30s", freq:"2x/semana"},
     {nome:"Bird Dog", tipo:"unilateral", series:"3x12", freq:"2x/semana"},
-    {nome:"Extensão Lombar Isométrica", tipo:"isometrico", series:"3x20s", freq:"2x/semana"},
-    {nome:"Superman Controlado", tipo:"mobilidade", series:"3x12", freq:"2x/semana"},
-    {nome:"Side Plank (Lateral)", tipo:"isometrico", series:"3x25s", freq:"2x/semana"}
+    {nome:"Alongamento Lombar", tipo:"alongamento", series:"3x30s", freq:"2x/semana"}
   ]
 };
 
-/* ===== Sorteio com prioridade (unilateral > isometrico > mobilidade) ===== */
-function escolherDoisDaCategoria(cat){
+/* 🎯 Lógica inteligente */
+function escolherPorDiagnostico(cat, tipoDiagnostico){
   const lista = exerciciosBase[cat] || [];
   if(!lista.length) return [];
-  const prioridade = ["unilateral","isometrico","mobilidade"];
+  let prioridade = [];
+  if(tipoDiagnostico==="mobilidade") prioridade = ["mobilidade","unilateral"];
+  else if(tipoDiagnostico==="encurtamento") prioridade = ["alongamento","mobilidade"];
+  else prioridade = ["unilateral","isometrico","mobilidade"];
   const escolhidos = [];
   for(const tipo of prioridade){
     const candidatos = lista.filter(e=>e.tipo===tipo && !escolhidos.includes(e));
     while(candidatos.length && escolhidos.length<2){
       const i = Math.floor(Math.random()*candidatos.length);
-      const ex = candidatos.splice(i,1)[0];
-      if(!escolhidos.find(x=>x.nome===ex.nome)) escolhidos.push(ex);
+      escolhidos.push(candidatos.splice(i,1)[0]);
     }
     if(escolhidos.length>=2) break;
-  }
-  // Se ainda faltou, completa com qualquer um diferente
-  let pool = lista.filter(e=>!escolhidos.find(x=>x.nome===e.nome));
-  while(escolhidos.length<2 && pool.length){
-    const i = Math.floor(Math.random()*pool.length);
-    escolhidos.push(pool.splice(i,1)[0]);
   }
   return escolhidos;
 }
 
-/* ===== Geração do Treino a partir do Diagnóstico ===== */
+/* 🤖 Geração automática */
 function gerarTreinoAutomatico(){
   const form = new FormData(document.getElementById("formDiagnostico"));
-  const selecionadas = new Set();
+  const selecionadas = new Map();
 
-  // HQ → afeta Isquiotibiais e Quadríceps
-  if(form.getAll("hq").length){ selecionadas.add("Isquiotibiais"); selecionadas.add("Quadríceps"); }
-
-  // Diferença entre Pernas (músculos marcados)
-  form.getAll("musculo").forEach(m=> selecionadas.add(m));
-
-  // Baixa Mobilidade
-  form.getAll("mobilidade").forEach(m=> {
-    // mapear termos para categorias
-    if(m==="Quadril") selecionadas.add("Quadril");
-    if(m==="Joelho") selecionadas.add("Joelho");
-    if(m==="Tornozelo") selecionadas.add("Tornozelo");
-  });
-
-  // Encurtamento
-  form.getAll("encurtamento").forEach(m=> selecionadas.add(m));
-
-  if(!selecionadas.size){
-    alert("Selecione pelo menos um item no diagnóstico.");
-    return;
+  // HQ
+  if(form.getAll("hq").length){
+    selecionadas.set("Isquiotibiais","assimetria");
+    selecionadas.set("Quadríceps","assimetria");
   }
-
-  // Monta treino
-  treinoGerado = [];
-  selecionadas.forEach(cat=>{
-    const dois = escolherDoisDaCategoria(cat);
-    if(dois.length){
-      treinoGerado.push({categoria:cat, exercicios:dois});
-    }
+  // Diferença entre pernas
+  form.getAll("musculo").forEach(m=>selecionadas.set(m,"assimetria"));
+  // Mobilidade
+  form.getAll("mobilidade").forEach(m=>{
+    const map = {Quadril:"Quadril", Joelho:"Joelho", Tornozelo:"Tornozelo"};
+    selecionadas.set(map[m],"mobilidade");
   });
+  // Encurtamento
+  form.getAll("encurtamento").forEach(m=>selecionadas.set(m,"encurtamento"));
 
+  if(!selecionadas.size){ alert("Selecione ao menos um item no diagnóstico."); return; }
+
+  treinoGerado = [];
+  selecionadas.forEach((tipo,cat)=>{
+    const dois = escolherPorDiagnostico(cat,tipo);
+    if(dois.length) treinoGerado.push({categoria:cat,exercicios:dois});
+  });
   mostrarAba("treinos");
 }
 
-/* ===== Render Treino Oficial ===== */
+/* 🧾 Renderização */
 function renderTreinoGerado(){
   const div = document.getElementById("treinoOficial");
   div.innerHTML = "";
-  if(!treinoGerado.length){
-    div.innerHTML = `<p class="text-gray-500 text-sm">Nenhum exercício sugerido ainda. Gere a partir do diagnóstico.</p>`;
-    return;
-  }
-  treinoGerado.forEach((grupo,i)=>{
-    let html = `<div class="card"><h3 class="text-blue-600 font-semibold mb-2">${grupo.categoria}</h3>`;
-    grupo.exercicios.forEach((e,j)=>{
-      html += `<div class="flex justify-between items-center border-b py-2">
-        <div><p class="font-semibold">${e.nome}</p><p class="text-sm text-gray-600">${e.series} — ${e.freq}</p></div>
-        <button class="text-red-500 font-bold" onclick="removerExercicio(${i},${j})">❌</button>
-      </div>`;
+  treinoGerado.forEach((g,i)=>{
+    let html = `<div class='card'><h3 class='text-blue-600 font-semibold mb-2'>${g.categoria}</h3>`;
+    g.exercicios.forEach((e,j)=>{
+      html += `<div class='flex justify-between items-center border-b py-2'>
+      <div><p class='font-semibold'>${e.nome}</p><p class='text-sm text-gray-600'>${e.series} — ${e.freq}</p></div>
+      <button class='text-red-500 font-bold' onclick='removerExercicio(${i},${j})'>❌</button></div>`;
     });
-    html += `</div>`;
-    div.innerHTML += html;
+    html+="</div>";
+    div.innerHTML+=html;
   });
 }
 function removerExercicio(i,j){
@@ -355,130 +311,81 @@ function removerExercicio(i,j){
   renderTreinoGerado();
 }
 
-/* ===== Render Catálogo ===== */
+/* 📘 Catálogo */
 function renderCatalogo(){
-  const div = document.getElementById("catalogoExercicios");
-  div.innerHTML = "";
+  const div=document.getElementById("catalogoExercicios");
+  div.innerHTML="";
   Object.entries(exerciciosBase).forEach(([cat,lista])=>{
-    let html = `<div class="card"><h3 class="text-blue-600 font-semibold mb-2">${cat}</h3>`;
-    lista.forEach((e,idx)=>{
-      html += `<div class="flex justify-between items-center border-b py-1">
-        <p class="text-sm">${e.nome}</p>
-        <button class="text-green-600 font-bold" onclick="adicionarAoTreino('${cat}',${idx})">➕</button>
-      </div>`;
+    let html=`<div class='card'><h3 class='text-blue-600 font-semibold mb-2'>${cat}</h3>`;
+    lista.forEach((e,i)=>{
+      html+=`<div class='flex justify-between items-center border-b py-1'>
+        <p class='text-sm'>${e.nome}</p>
+        <button class='text-green-600 font-bold' onclick='adicionarAoTreino("${cat}",${i})'>➕</button></div>`;
     });
-    html += `</div>`;
-    div.innerHTML += html;
+    html+="</div>";
+    div.innerHTML+=html;
   });
 }
-function adicionarAoTreino(cat, idx){
-  const ex = exerciciosBase[cat][idx];
-  let grupo = treinoGerado.find(g=>g.categoria===cat);
-  if(!grupo){ grupo = {categoria:cat, exercicios:[]}; treinoGerado.push(grupo); }
-  // evita duplicar mesmo exercício pelo nome
-  if(!grupo.exercicios.find(x=>x.nome===ex.nome)){
-    grupo.exercicios.push(ex);
-    renderTreinoGerado();
-  }
+function adicionarAoTreino(cat,i){
+  const ex=exerciciosBase[cat][i];
+  let g=treinoGerado.find(t=>t.categoria===cat);
+  if(!g){g={categoria:cat,exercicios:[]};treinoGerado.push(g);}
+  if(!g.exercicios.find(x=>x.nome===ex.nome)){g.exercicios.push(ex);renderTreinoGerado();}
 }
 function adicionarExercicioManual(){
-  const categoria = prompt("Categoria (ex: Joelho, Glúteo, etc.):");
-  const nome = prompt("Nome do exercício:");
-  const tipo = prompt("Tipo (unilateral / isometrico / mobilidade):","unilateral");
-  const series = prompt("Séries e repetições/tempo (ex: 3x10 ou 3x30s):","3x10");
-  const freq = prompt("Frequência semanal (ex: 2x/semana):","2x/semana");
-  if(!categoria || !nome) return;
-  if(!exerciciosBase[categoria]) exerciciosBase[categoria] = [];
-  exerciciosBase[categoria].push({nome, tipo:(tipo||"unilateral"), series, freq});
-  renderCatalogo();
+  const cat=prompt("Categoria:"); const nome=prompt("Nome do exercício:");
+  const tipo=prompt("Tipo (unilateral/isometrico/mobilidade/alongamento):","unilateral");
+  const series=prompt("Séries:", "3x10"); const freq=prompt("Frequência:","2x/semana");
+  if(!cat||!nome)return; if(!exerciciosBase[cat])exerciciosBase[cat]=[];
+  exerciciosBase[cat].push({nome,tipo,series,freq}); renderCatalogo();
 }
 
-/* ===== Salvar Treino ===== */
+/* 💾 Salvar Treino */
 async function salvarTreino(){
-  if(!atletaSelecionado){ alert("Selecione um atleta primeiro."); return; }
-  if(!treinoGerado.length){ alert("Gere/adicione exercícios antes de salvar."); return; }
-  const dado = {
-    nome_atleta: atletaSelecionado,
-    data: new Date().toLocaleDateString("pt-BR"),
-    treino_gerado: treinoGerado
-  };
-  await db.collection("treinos_extras").add(dado);
-  alert("✅ Treino salvo com sucesso!");
-  mostrarAba("historico");
+  if(!atletaSelecionado){alert("Selecione um atleta.");return;}
+  if(!treinoGerado.length){alert("Gere o treino primeiro.");return;}
+  await db.collection("treinos_extras").add({
+    nome_atleta:atletaSelecionado,
+    data:new Date().toLocaleDateString("pt-BR"),
+    treino_gerado:treinoGerado
+  });
+  alert("✅ Treino salvo!"); mostrarAba("historico");
 }
 
-/* ===== Histórico + Modal ===== */
-const modalCache = {};
+/* 📜 Histórico + Modal */
+const modalCache={};
 async function carregarHistorico(){
-  const t = document.getElementById("tabelaHistorico");
-  t.innerHTML = "";
-  const snap = await db.collection("treinos_extras").get();
+  const snap=await db.collection("treinos_extras").get();
+  const t=document.getElementById("tabelaHistorico");
+  t.innerHTML="";
   snap.forEach(doc=>{
-    const x = doc.data();
-    t.innerHTML += `
-      <tr>
-        <td>${x.nome_atleta||"-"}</td>
-        <td>${x.data||"-"}</td>
-        <td>
-          <button class="text-blue-600 underline" onclick="abrirModal('${doc.id}')">Ver Detalhes</button>
-          <button class="text-red-600 underline ml-3" onclick="excluirTreino('${doc.id}')">Excluir</button>
-        </td>
-      </tr>`;
-    modalCache[doc.id] = x; // cache para abrir rápido
+    const d=doc.data();
+    t.innerHTML+=`<tr><td>${d.nome_atleta}</td><td>${d.data}</td>
+      <td><button class='text-blue-600' onclick='abrirModal("${doc.id}")'>Ver Detalhes</button>
+      <button class='text-red-600 ml-3' onclick='excluirTreino("${doc.id}")'>Excluir</button></td></tr>`;
+    modalCache[doc.id]=d;
   });
 }
-
 function slugImagem(nome){
-  // remove acentos, troca espaços por _, minúsculas
-  return nome
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .toLowerCase()
-    .replace(/[^\w\s-]/g,"")
-    .trim()
-    .replace(/\s+/g,"_") + ".jpg";
+  return nome.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g,"_")+".jpg";
 }
-
-async function abrirModal(id){
-  // se não estiver no cache por algum motivo, busca no Firestore
-  let x = modalCache[id];
-  if(!x){
-    const doc = await db.collection("treinos_extras").doc(id).get();
-    x = doc.exists ? doc.data() : null;
-  }
-  if(!x){ alert("Registro não encontrado."); return; }
-
-  let conteudo = `<h2 class="text-xl font-bold text-blue-600 mb-2">${x.nome_atleta||"-"}</h2>
-                  <p class="text-sm text-gray-600 mb-3">${x.data||"-"}</p>`;
-  (x.treino_gerado||[]).forEach(gr=>{
-    conteudo += `<h3 class="font-semibold mt-3 mb-2 text-blue-600">${gr.categoria}</h3>`;
-    (gr.exercicios||[]).forEach(e=>{
-      const img = IMG_BASE + slugImagem(e.nome);
-      conteudo += `<div class="mb-3">
-        <img src="${img}" alt="${e.nome}" class="w-full rounded mb-1" onerror="this.style.display='none'">
-        <p class="font-semibold">${e.nome}</p>
-        <p class="text-sm text-gray-600">${e.series} — ${e.freq}</p>
-      </div>`;
+function abrirModal(id){
+  const x=modalCache[id]; if(!x)return;
+  let html=`<h2 class='text-xl font-bold text-blue-600 mb-2'>${x.nome_atleta}</h2><p class='text-sm text-gray-600 mb-3'>${x.data}</p>`;
+  (x.treino_gerado||[]).forEach(cat=>{
+    html+=`<h3 class='font-semibold text-blue-600 mt-3 mb-2'>${cat.categoria}</h3>`;
+    (cat.exercicios||[]).forEach(e=>{
+      html+=`<div class='mb-3'><img src='${IMG_BASE+slugImagem(e.nome)}' class='w-full rounded mb-1' onerror="this.style.display='none'">
+      <p class='font-semibold'>${e.nome}</p><p class='text-sm text-gray-600'>${e.series} — ${e.freq}</p></div>`;
     });
   });
-  conteudo += `<button class="btn w-full mt-3" onclick="fecharModal()">Fechar</button>`;
-
-  const modal = document.getElementById("modalDetalhes");
-  document.getElementById("modalConteudo").innerHTML = conteudo;
-  modal.classList.add("show");  // garante abrir
+  html+="<button class='btn w-full mt-3' onclick='fecharModal()'>Fechar</button>";
+  document.getElementById("modalConteudo").innerHTML=html;
+  document.getElementById("modalDetalhes").classList.add("show");
 }
-function fecharModal(){
-  document.getElementById("modalDetalhes").classList.remove("show");
-}
-// fecha ao clicar fora
-document.getElementById("modalDetalhes").addEventListener("click", (e)=>{
-  if(e.target.id==="modalDetalhes") fecharModal();
-});
-
-async function excluirTreino(id){
-  if(!confirm("Excluir este treino?")) return;
-  await db.collection("treinos_extras").doc(id).delete();
-  await carregarHistorico();
-}
+function fecharModal(){document.getElementById("modalDetalhes").classList.remove("show");}
+document.getElementById("modalDetalhes").addEventListener("click",e=>{if(e.target.id==="modalDetalhes")fecharModal();});
+async function excluirTreino(id){if(confirm("Excluir treino?")){await db.collection("treinos_extras").doc(id).delete();carregarHistorico();}}
 </script>
 </body>
 </html>
