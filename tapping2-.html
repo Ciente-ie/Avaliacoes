@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ciente IE — Teste de Tapping</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase v11 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs,
+      doc, setDoc
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    /* ===============================
+       FIREBASE CONFIG — CIENTE IE
+    =============================== */
+    const firebaseConfig = {
+  apiKey: "AIzaSyDsoutLk5gmxq5zlu548HWFrox37u1zrxk",
+  authDomain: "appintegrado-ciente.firebaseapp.com",
+  projectId: "appintegrado-ciente",
+  storageBucket: "appintegrado-ciente.firebasestorage.app",
+  messagingSenderId: "487559108410",
+  appId: "1:487559108410:web:08868011454e609ee52203"
+};
+
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    document.addEventListener("DOMContentLoaded", async () => {
+
+      /* ===============================
+         ELEMENTOS
+      =============================== */
+      const athleteSelect = document.getElementById("athleteSelect");
+      const btnBegin = document.getElementById("btnBegin");
+
+      const screenStart = document.getElementById("screenStart");
+      const screenTest = document.getElementById("screenTest");
+      const screenResult = document.getElementById("screenResult");
+
+      const stageLabel = document.getElementById("stageLabel");
+      const instruction = document.getElementById("instruction");
+      const timeEl = document.getElementById("time");
+      const tapBtn = document.getElementById("tapBtn");
+      const btnStartStage = document.getElementById("btnStartStage");
+
+      const classificacaoEl = document.getElementById("classificacao");
+      const explicacaoEl = document.getElementById("explicacao");
+
+      /* ===============================
+         CARREGAR ATLETAS
+      =============================== */
+      async function carregarAtletas() {
+  athleteSelect.innerHTML = `
+    <option value="" disabled selected>Selecione...</option>
+  `;
+
+  const snap = await getDocs(collection(db, "elenco"));
+
+  const atletas = [];
+
+  snap.forEach(d => {
+    const data = d.data();
+    if (data.status_principal !== "Ativo") return;
+
+    atletas.push({
+      id: d.id,
+      nome: data.nome,
+      posicao: data.posicao
+    });
+  });
+
+  // ORDEM ALFABÉTICA PELO NOME
+  atletas.sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+  );
+
+  atletas.forEach(a => {
+    const opt = document.createElement("option");
+    opt.value = a.id;
+    opt.textContent = `${a.nome} — ${a.posicao}`;
+    athleteSelect.appendChild(opt);
+  });
+}
+
+
+      await carregarAtletas();
+
+      athleteSelect.onchange = () => {
+        btnBegin.disabled = !athleteSelect.value;
+      };
+
+      /* ===============================
+         ESTADO DO TESTE
+      =============================== */
+      let stage = 1;
+      let taps = [];
+      let t1 = 0, t2 = 0;
+      let startTime = null;
+      let raf = null;
+      const DURATION = 10000;
+
+      /* ===============================
+         INÍCIO DO TESTE
+      =============================== */
+      btnBegin.onclick = () => {
+        screenStart.classList.add("hidden");
+        screenTest.classList.remove("hidden");
+        prepararEtapa(1);
+      };
+
+      function prepararEtapa(s) {
+        stage = s;
+        taps = [];
+        timeEl.textContent = "10";
+        tapBtn.disabled = true;
+        btnStartStage.disabled = false;
+
+        stageLabel.textContent = `Etapa ${s}`;
+        instruction.textContent = s === 1
+          ? "Toque o botão o mais rápido que conseguir durante 10 segundos."
+          : "Agora refaça com metade da velocidade do primeiro teste.";
+      }
+
+      btnStartStage.onclick = iniciarEtapa;
+
+      function iniciarEtapa() {
+        btnStartStage.disabled = true;
+        tapBtn.disabled = false;
+        startTime = performance.now();
+        raf = requestAnimationFrame(loop);
+      }
+
+      function loop(now) {
+        const left = Math.max(0, DURATION - (now - startTime));
+        timeEl.textContent = Math.ceil(left / 1000);
+
+        if (left <= 0) {
+          finalizarEtapa();
+          return;
+        }
+        raf = requestAnimationFrame(loop);
+      }
+
+      tapBtn.onclick = () => {
+        taps.push(performance.now());
+        const d = document.createElement("div");
+        d.className = "tap-dot";
+        d.style.left = Math.random() * 90 + "%";
+        d.style.top = Math.random() * 90 + "%";
+        document.getElementById("tapArea").appendChild(d);
+        setTimeout(() => d.remove(), 300);
+      };
+
+      async function finalizarEtapa() {
+        cancelAnimationFrame(raf);
+        tapBtn.disabled = true;
+
+        if (stage === 1) {
+          t1 = taps.length;
+          prepararEtapa(2);
+          return;
+        }
+
+        t2 = taps.length;
+        await salvarResultado();
+        mostrarResultado();
+      }
+
+      /* ===============================
+         SALVAR NO daily_metrics
+      =============================== */
+      async function salvarResultado() {
+        const athleteId = athleteSelect.value;
+        const athleteName = athleteSelect.options[athleteSelect.selectedIndex].text;
+        const date = new Date().toISOString().slice(0, 10);
+        const docId = `${athleteId}_${date}`;
+
+        const ratio = t2 / (t1 / 2);
+
+        let classificacao = "equilibrado";
+        if (ratio > 1.2) classificacao = "tipo_excitavel";
+        else if (ratio < 0.8) classificacao = "tipo_inerte";
+
+        await setDoc(
+          doc(db, "daily_metrics", docId),
+          {
+            athlete_id: athleteId,
+            athlete_name: athleteName,
+            date,
+            tapping: {
+              tempo_1: t1,
+              tempo_2: t2,
+              ratio,
+              classificacao
+            },
+            updated_at: new Date()
+          },
+          { merge: true }
+        );
+      }
+
+      /* ===============================
+         RESULTADO (SEM NÚMEROS)
+      =============================== */
+      function mostrarResultado() {
+        screenTest.classList.add("hidden");
+        screenResult.classList.remove("hidden");
+
+        const ratio = t2 / (t1 / 2);
+
+        if (ratio > 1.2) {
+          classificacaoEl.textContent = "Tipo Excitável (Hiperexcitado)";
+          explicacaoEl.textContent =
+            "Alta ativação inicial, com dificuldade em ajustar o ritmo ao longo do tempo.";
+        } else if (ratio < 0.8) {
+          classificacaoEl.textContent = "Tipo Inerte (Apatia funcional)";
+          explicacaoEl.textContent =
+            "Baixa ativação inicial e menor variação do ritmo durante a tarefa.";
+        } else {
+          classificacaoEl.textContent = "Tipo Equilibrado";
+          explicacaoEl.textContent =
+            "Boa ativação inicial com ajuste e estabilidade do ritmo.";
+        }
+      }
+
+      document.getElementById("btnFinish").onclick = () => location.reload();
+
+    });
+  </script>
+
+  <style>
+    .tap-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #0f172a;
+      opacity: 0.2;
+      position: absolute;
+    }
+    .no-select {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+
+<div class="max-w-md mx-auto px-4 py-6">
+
+  <!-- INÍCIO -->
+  <div id="screenStart" class="bg-white p-5 rounded-2xl border">
+    <h1 class="text-2xl font-semibold">Teste de Tapping</h1>
+    <p class="text-sm text-slate-600 mt-2">
+      Este teste avalia sua resposta motora e capacidade de ajuste do ritmo.
+    </p>
+
+    <div class="mt-5">
+      <label class="text-xs text-slate-600">Seu nome</label>
+      <select id="athleteSelect" class="mt-1 w-full px-3 py-2 border rounded-lg">
+        <option value="" disabled selected>Selecione...</option>
+      </select>
+    </div>
+
+    <button id="btnBegin" disabled
+      class="mt-5 w-full py-3 rounded-xl bg-slate-900 text-white font-medium disabled:opacity-40">
+      Iniciar teste
+    </button>
+  </div>
+
+  <!-- TESTE -->
+  <div id="screenTest" class="hidden bg-white p-5 rounded-2xl border relative">
+    <span id="stageLabel"
+      class="text-xs px-2 py-1 bg-slate-100 border rounded-full"></span>
+
+    <h2 id="instruction" class="text-xl font-semibold mt-3"></h2>
+
+    <p class="text-sm text-slate-600 mt-2">
+      Objetivo do teste: avaliar sua resposta motora e ajuste de ritmo.
+    </p>
+
+    <div class="flex justify-between items-center mt-4">
+      <div class="text-xs text-slate-500">Tempo</div>
+      <div id="time" class="text-3xl font-semibold">10</div>
+    </div>
+
+    <div id="tapArea" class="mt-5 relative">
+      <button id="tapBtn"
+        class="w-full h-56 rounded-2xl border bg-slate-50 text-2xl font-semibold no-select"
+        disabled>
+        TOCAR
+      </button>
+    </div>
+
+    <button id="btnStartStage"
+      class="mt-4 w-full py-3 rounded-xl bg-slate-900 text-white font-medium">
+      Iniciar teste
+    </button>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="screenResult" class="hidden bg-white p-5 rounded-2xl border text-center">
+    <h2 class="text-xl font-semibold">Resultado</h2>
+
+    <div id="classificacao" class="mt-5 text-lg font-semibold"></div>
+    <div id="explicacao" class="mt-3 text-sm text-slate-600"></div>
+
+    <button id="btnFinish"
+      class="mt-6 w-full py-3 rounded-xl bg-slate-900 text-white">
+      Finalizar
+    </button>
+  </div>
+
+</div>
+
+</body>
+</html>
