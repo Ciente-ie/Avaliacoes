@@ -210,25 +210,9 @@
          RESULTADO (SEM NÚMEROS)
       =============================== */
       function mostrarResultado() {
-        screenTest.classList.add("hidden");
-        screenResult.classList.remove("hidden");
-
-        const ratio = t2 / (t1 / 2);
-
-        if (ratio > 1.2) {
-          classificacaoEl.textContent = "Tipo Excitável (Hiperexcitado)";
-          explicacaoEl.textContent =
-            "Alta ativação inicial, com dificuldade em ajustar o ritmo ao longo do tempo.";
-        } else if (ratio < 0.8) {
-          classificacaoEl.textContent = "Tipo Inerte (Apatia funcional)";
-          explicacaoEl.textContent =
-            "Baixa ativação inicial e menor variação do ritmo durante a tarefa.";
-        } else {
-          classificacaoEl.textContent = "Tipo Equilibrado";
-          explicacaoEl.textContent =
-            "Boa ativação inicial com ajuste e estabilidade do ritmo.";
-        }
-      }
+  screenTest.classList.add("hidden");
+  screenResult.classList.remove("hidden");
+}
 
       document.getElementById("btnFinish").onclick = () => location.reload();
 
@@ -309,8 +293,9 @@
   <div id="screenResult" class="hidden bg-white p-5 rounded-2xl border text-center">
     <h2 class="text-xl font-semibold">Resultado</h2>
 
-    <div id="classificacao" class="mt-5 text-lg font-semibold"></div>
-    <div id="explicacao" class="mt-3 text-sm text-slate-600"></div>
+   <div class="mt-6 text-lg font-semibold text-green-700">
+  Você está preparado para o jogo!
+</div>
 
     <button id="btnFinish"
       class="mt-6 w-full py-3 rounded-xl bg-slate-900 text-white">
