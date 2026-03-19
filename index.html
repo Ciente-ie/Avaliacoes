@@ -107,13 +107,17 @@
 </div>
 
 <div id="calib-overlay">
-  <div class="ctl">CALIBRAR FITA</div>
-  <div class="csub">
-    Toque na ponta <strong style="color:#ffd600">INFERIOR</strong> da fita (nivel do chao)<br>
-    depois na ponta <strong style="color:#ffd600">SUPERIOR</strong> (1 metro acima)
-  </div>
-  <div id="calib-pts">0 / 2 pontos</div>
+  <div class="ctl">CALIBRAR ESCALA</div>
+  <div class="csub">Posicione a camera de frente para a fita de 1m na parede. Siga os passos.</div>
+  <div id="calib-pts">1</div>
+  <div id="calib-instruction">Toque na ponta INFERIOR da fita</div>
+  <button id="btn-calib-next">PROXIMO PASSO</button>
   <button id="btn-calib-cancel">CANCELAR</button>
+</div>
+
+<div id="calib-tap-hint">
+  <div class="hint-ring"></div>
+  <div class="hint-label" id="hint-label">Toque na fita</div>
 </div>
 
 <div id="ui">
