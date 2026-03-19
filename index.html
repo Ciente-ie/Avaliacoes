@@ -6,54 +6,53 @@
 <title>CMJ Teste</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#000; color:#fff; font-family: monospace; height:100dvh; overflow:hidden; }
-
+  body { background:#000; color:#fff; font-family:monospace; height:100dvh; overflow:hidden; }
   #video { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
   #canvas { position:fixed; inset:0; width:100%; height:100%; transform:scaleX(-1); }
-
   #ui {
-    position:fixed; bottom:0; left:0; right:0;
-    padding:16px;
-    background:linear-gradient(transparent, rgba(0,0,0,0.85));
-    display:flex; flex-direction:column; align-items:center; gap:12px;
-    z-index:10;
+    position:fixed; bottom:0; left:0; right:0; padding:16px;
+    background:linear-gradient(transparent, rgba(0,0,0,0.88));
+    display:flex; flex-direction:column; align-items:center; gap:12px; z-index:10;
   }
-
-  #result {
-    font-size:64px; font-weight:bold;
-    color:#00ff87;
-    text-shadow: 0 0 30px rgba(0,255,135,0.5);
-    line-height:1;
-  }
+  #result { font-size:64px; font-weight:bold; color:#00ff87; text-shadow:0 0 30px rgba(0,255,135,0.5); line-height:1; }
   #result span { font-size:18px; color:#888; display:block; text-align:center; }
-
-  #status { font-size:13px; color:#aaa; letter-spacing:0.05em; text-align:center; }
-
+  #status { font-size:13px; color:#aaa; letter-spacing:0.05em; text-align:center; max-width:300px; line-height:1.5; }
   #btn {
     width:70px; height:70px; border-radius:50%;
-    border:2px solid #00ff87;
-    background:rgba(0,255,135,0.1);
+    border:2px solid #00ff87; background:rgba(0,255,135,0.1);
     color:#00ff87; font-size:11px; font-weight:bold;
-    letter-spacing:0.05em; cursor:pointer;
-    -webkit-tap-highlight-color:transparent;
+    letter-spacing:0.05em; cursor:pointer; -webkit-tap-highlight-color:transparent;
   }
   #btn.armed { border-color:#00d4ff; color:#00d4ff; background:rgba(0,212,255,0.15); }
   #btn.detecting { border-color:#ff3d5a; color:#ff3d5a; background:rgba(255,61,90,0.12); }
-
+  #btn-calib {
+    padding:8px 18px; border-radius:20px;
+    border:1px solid rgba(255,214,0,0.6); background:transparent;
+    color:#ffd600; font-family:monospace; font-size:11px;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  #btn-calib.done { border-color:rgba(0,255,135,0.6); color:#00ff87; }
   #log {
     position:fixed; top:12px; left:12px;
-    font-size:11px; color:rgba(255,255,255,0.4);
-    line-height:1.6; z-index:10;
+    font-size:11px; color:rgba(255,255,255,0.4); line-height:1.6; z-index:10;
   }
-
-  #history {
-    display:flex; gap:8px; align-items:flex-end; height:36px;
-  }
-  .hbar {
-    width:18px; background:rgba(0,255,135,0.2);
-    border-radius:3px 3px 0 0; min-height:4px;
-  }
+  #history { display:flex; gap:8px; align-items:flex-end; height:36px; }
+  .hbar { width:18px; background:rgba(0,255,135,0.2); border-radius:3px 3px 0 0; min-height:4px; }
   .hbar.last { background:#00ff87; }
+  /* overlay calibracao */
+  #calib-overlay {
+    position:fixed; inset:0; z-index:20; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.65); gap:16px; padding:32px; text-align:center;
+  }
+  #calib-overlay.show { display:flex; }
+  #calib-overlay .ctl { font-size:20px; font-weight:bold; color:#ffd600; }
+  #calib-overlay .csub { font-size:13px; color:#ccc; line-height:1.7; }
+  #calib-pts { font-size:13px; color:#ffd600; font-weight:bold; }
+  #btn-calib-cancel {
+    padding:8px 20px; border-radius:20px; border:1px solid rgba(255,255,255,0.3);
+    background:transparent; color:#aaa; font-family:monospace; font-size:11px; cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -61,70 +60,175 @@
 <video id="video" playsinline autoplay muted></video>
 <canvas id="canvas"></canvas>
 
-<div id="log" id="log">
-  <div id="log-pose">pose: –</div>
-  <div id="log-fps">fps: –</div>
-  <div id="log-hip">quadril: –</div>
+<div id="log">
+  <div id="log-pose">pose: -</div>
+  <div id="log-fps">fps: -</div>
+  <div id="log-pes">pes: -</div>
   <div id="log-phase">fase: carregando</div>
+  <div id="log-calib">calib: aguardando</div>
+</div>
+
+<div id="calib-overlay">
+  <div class="ctl">CALIBRAR FITA</div>
+  <div class="csub">
+    Toque na ponta <strong style="color:#ffd600">INFERIOR</strong> da fita (nivel do chao)<br>
+    depois na ponta <strong style="color:#ffd600">SUPERIOR</strong> (1 metro acima)
+  </div>
+  <div id="calib-pts">0 / 2 pontos</div>
+  <button id="btn-calib-cancel">CANCELAR</button>
 </div>
 
 <div id="ui">
   <div id="history"></div>
-  <div id="result">–<span>cm (altura do salto)</span></div>
-  <div id="status">Aguarde o carregamento…</div>
-  <button id="btn">MEDIR</button>
+  <div id="result">-<span>cm (altura do salto)</span></div>
+  <div id="status">Aguarde o carregamento...</div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <button id="btn-calib">CALIBRAR FITA</button>
+    <button id="btn">MEDIR</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-
 <script>
-const video  = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx    = canvas.getContext('2d');
-const btn    = document.getElementById('btn');
-const status = document.getElementById('status');
-const result = document.getElementById('result');
-const logPose  = document.getElementById('log-pose');
-const logFps   = document.getElementById('log-fps');
-const logHip   = document.getElementById('log-hip');
-const logPhase = document.getElementById('log-phase');
-const histEl   = document.getElementById('history');
+const video   = document.getElementById('video');
+const canvas  = document.getElementById('canvas');
+const ctx     = canvas.getContext('2d');
+const btn     = document.getElementById('btn');
+const btnCalib= document.getElementById('btn-calib');
+const status  = document.getElementById('status');
+const result  = document.getElementById('result');
+const logPose = document.getElementById('log-pose');
+const logFps  = document.getElementById('log-fps');
+const logPes  = document.getElementById('log-pes');
+const logPhase= document.getElementById('log-phase');
+const logCalib= document.getElementById('log-calib');
+const histEl  = document.getElementById('history');
+const calibOverlay = document.getElementById('calib-overlay');
+const calibPtsEl   = document.getElementById('calib-pts');
+const btnCalibCancel = document.getElementById('btn-calib-cancel');
 
-// ── STATE
-let phase = 'loading'; // loading | ready | armed | detecting
-let baseline = null;   // média do quadril em pé (px)
-let peakY    = null;   // Y mais alto durante salto
+// estado
+let phase    = 'loading';
+let baseline = null;
+let peakY    = null;
 let buf      = [];
 let landingN = 0;
 let jumpStart= 0;
 let lastT    = 0;
 let fps      = 0;
-// 1 px = ? cm  →  estimado pela altura do corpo (tornozelo ao ombro)
-// sem calibração física, usamos proporção corporal: altura real ~170cm estimada
-let pxPerCm  = null;
 let results  = [];
+let pxPerCm     = null;
+let calibByTape = false;
+let calibLine   = null; // {y0, y1} no espaco canvas (y0=inferior, y1=superior)
 
-const L_HIP=23, R_HIP=24, L_ANKLE=27, R_ANKLE=28, L_SHOULDER=11, R_SHOULDER=12;
+const STORAGE_KEY = 'cmj_pxPerCm_v2';
+const L_ANKLE=27, R_ANKLE=28, L_SHOULDER=11, R_SHOULDER=12;
 const BUF_N = 25;
+
+// persistencia
+function loadCalib() {
+  const v = localStorage.getItem(STORAGE_KEY);
+  if (v) {
+    pxPerCm = parseFloat(v);
+    calibByTape = true;
+    updateCalibBtn();
+    logCalib.textContent = 'calib: fita (' + pxPerCm.toFixed(2) + 'px/cm)';
+  }
+}
+function saveCalib(v) { localStorage.setItem(STORAGE_KEY, String(v)); }
 
 function setPhase(p) {
   phase = p;
   logPhase.textContent = 'fase: ' + p;
   btn.className = p==='armed'?'armed':p==='detecting'?'detecting':'';
-  const msgs = { ready:'Pressione MEDIR e fique em pé no quadro.', armed:'Pronto — pode saltar!', detecting:'Saltando…', loading:'Carregando…' };
-  status.textContent = msgs[p]||'';
+  const msgs = {
+    ready: calibByTape ? 'Pressione MEDIR e fique em pe no quadro.' : 'Calibre a fita para maior precisao.',
+    armed: 'Pronto - pode saltar!',
+    detecting: 'Saltando...',
+    loading: 'Carregando...',
+  };
+  status.textContent = msgs[p] || '';
 }
 
-// Calibração por altura corporal: ombro → tornozelo ≈ 145cm (estimativa)
+function updateCalibBtn() {
+  btnCalib.className = calibByTape ? 'done' : '';
+  btnCalib.textContent = calibByTape ? 'RECALIBRAR' : 'CALIBRAR FITA';
+}
+
+// calibracao por toque na fita
+let calibTaps = [];
+
+btnCalib.addEventListener('click', startCalib);
+btnCalibCancel.addEventListener('click', cancelCalib);
+
+function startCalib() {
+  calibTaps = [];
+  calibPtsEl.textContent = '0 / 2 pontos';
+  calibOverlay.classList.add('show');
+  canvas.addEventListener('click', onCalibTap);
+}
+
+function cancelCalib() {
+  calibOverlay.classList.remove('show');
+  canvas.removeEventListener('click', onCalibTap);
+  calibTaps = [];
+}
+
+function onCalibTap(e) {
+  const rect = canvas.getBoundingClientRect();
+  // posicao no display (canvas esta espelhado via CSS)
+  const xDisp = e.clientX - rect.left;
+  const yDisp = e.clientY - rect.top;
+  // converter para coordenadas reais do canvas
+  const xCv = canvas.width - (xDisp / rect.width) * canvas.width;
+  const yCv = (yDisp / rect.height) * canvas.height;
+
+  calibTaps.push({ xCv, yCv, xDisp, yDisp });
+  calibPtsEl.textContent = calibTaps.length + ' / 2 pontos';
+
+  // dot de feedback no espaco visual (nao precisa desespelhar para o dot)
+  const xDot = (xDisp / rect.width) * canvas.width;
+  const yDot = (yDisp / rect.height) * canvas.height;
+  ctx.save();
+  ctx.fillStyle = '#ffd600';
+  ctx.beginPath(); ctx.arc(xDot, yDot, 14, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(String(calibTaps.length), xDot, yDot + 5);
+  ctx.restore();
+
+  if (calibTaps.length === 2) finishCalib();
+}
+
+function finishCalib() {
+  calibOverlay.classList.remove('show');
+  canvas.removeEventListener('click', onCalibTap);
+
+  const dy = Math.abs(calibTaps[1].yCv - calibTaps[0].yCv);
+  pxPerCm = dy / 100; // fita = 100cm
+  calibByTape = true;
+
+  // guarda extremos para desenhar linha de referencia
+  calibLine = {
+    y0: Math.max(calibTaps[0].yCv, calibTaps[1].yCv), // inferior
+    y1: Math.min(calibTaps[0].yCv, calibTaps[1].yCv), // superior
+  };
+
+  saveCalib(pxPerCm);
+  updateCalibBtn();
+  logCalib.textContent = 'calib: fita (' + pxPerCm.toFixed(2) + ' px/cm)';
+  status.textContent = 'Calibrado! 1m = ' + Math.round(dy) + 'px. Pode medir.';
+  setPhase('ready');
+}
+
+// fallback: estima px/cm pela proporcao corporal
 function estimatePxPerCm(lm) {
   const sy = ((lm[L_SHOULDER].y + lm[R_SHOULDER].y)/2) * canvas.height;
   const ay = ((lm[L_ANKLE].y   + lm[R_ANKLE].y  )/2) * canvas.height;
-  const px = Math.abs(ay - sy);
-  return px / 145; // 145cm = ombro→tornozelo médio adulto
+  return Math.abs(ay - sy) / 145;
 }
 
-// Ponto de rastreamento: tornozelo (média dos dois pés)
 function getTrackY(lm) { return ((lm[L_ANKLE].y + lm[R_ANKLE].y)/2) * canvas.height; }
 function getTrackX(lm) { return ((lm[L_ANKLE].x + lm[R_ANKLE].x)/2) * canvas.width; }
 
@@ -138,58 +242,54 @@ function onResults(res) {
   const now = performance.now();
   fps = lastT ? Math.round(1000/(now-lastT)) : 0;
   lastT = now;
-
   canvas.width  = video.videoWidth  || 640;
   canvas.height = video.videoHeight || 480;
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
   logFps.textContent = 'fps: ' + fps;
 
+  if (calibLine) drawCalibLine();
+
   if (!res.poseLandmarks) {
-    logPose.textContent = 'pose: não detectada';
-    if (phase==='armed') status.textContent='Posicione-se no quadro…';
+    logPose.textContent = 'pose: nao detectada';
+    if (phase==='armed') status.textContent='Posicione-se no quadro...';
     return;
   }
 
   const lm = res.poseLandmarks;
   logPose.textContent = 'pose: ok';
-
   const hy = getTrackY(lm);
   const hx = getTrackX(lm);
-  logHip.textContent = 'pés: ' + Math.round(hy) + 'px';
+  logPes.textContent = 'pes: ' + Math.round(hy) + 'px';
 
-  // Calibração automática pela proporção corporal
-  if (lm[L_SHOULDER].visibility > 0.7 && lm[L_ANKLE].visibility > 0.7) {
+  // fallback se nao calibrou pela fita
+  if (!calibByTape && lm[L_SHOULDER].visibility > 0.7 && lm[L_ANKLE].visibility > 0.7) {
     pxPerCm = estimatePxPerCm(lm);
+    logCalib.textContent = 'calib: estimada (' + pxPerCm.toFixed(2) + 'px/cm)';
   }
 
-  // Desenhar esqueleto simples
   drawSkeleton(lm);
-  drawHip(hx, hy);
+  drawFeet(hx, hy);
 
-  // Linha do baseline
   if (baseline && (phase==='armed'||phase==='detecting')) {
     ctx.save(); ctx.setLineDash([6,8]); ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(0,baseline); ctx.lineTo(canvas.width,baseline); ctx.stroke();
     ctx.setLineDash([]); ctx.restore();
   }
 
-  // ── MÁQUINA DE ESTADO ──
   if (phase === 'armed') {
     buf.push(hy);
     if (buf.length > BUF_N) buf.shift();
-
     if (buf.length === BUF_N) {
       baseline = buf.reduce((a,b)=>a+b,0)/BUF_N;
-      const thr = pxPerCm ? pxPerCm*4 : 25; // 4cm threshold
+      const thr = pxPerCm ? pxPerCm*4 : 25;
       if (hy < baseline - thr) {
         peakY = hy; jumpStart = now;
         setPhase('detecting'); landingN=0;
       } else {
-        status.textContent = 'Pronto — pode saltar!';
+        status.textContent = 'Pronto - pode saltar!';
       }
     } else {
-      status.textContent = `Calibrando (${buf.length}/${BUF_N})…`;
+      status.textContent = 'Calibrando (' + buf.length + '/' + BUF_N + ')...';
     }
   }
 
@@ -205,22 +305,19 @@ function onResults(res) {
         setPhase('ready');
       }
     } else { landingN=0; }
-
-    // Seta de altura durante o voo
     if (peakY && baseline) drawArrow(hx, peakY, baseline);
   }
 }
 
 function showResult(cm, dPx, flightMs) {
   const val = cm ? cm.toFixed(1) : '?';
-  result.innerHTML = `${val}<span>cm (altura do salto)</span>`;
+  result.innerHTML = val + '<span>cm (altura do salto)</span>';
   if (cm) results.push(cm);
   renderHistory();
-
-  // feedback
+  const src = calibByTape ? 'fita' : 'estimado';
   status.textContent = cm
-    ? `${cm.toFixed(1)} cm · voo ${Math.round(flightMs)}ms · ${fps}fps`
-    : `deslocamento ${Math.round(dPx)}px (sem calibração)`;
+    ? cm.toFixed(1) + ' cm [' + src + '] · voo ' + Math.round(flightMs) + 'ms · ' + fps + 'fps'
+    : 'deslocamento ' + Math.round(dPx) + 'px';
 }
 
 function renderHistory() {
@@ -236,6 +333,19 @@ function renderHistory() {
   });
 }
 
+function drawCalibLine() {
+  const x = 28;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,214,0,0.75)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x, calibLine.y0); ctx.lineTo(x, calibLine.y1); ctx.stroke();
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x-8,calibLine.y0); ctx.lineTo(x+8,calibLine.y0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-8,calibLine.y1); ctx.lineTo(x+8,calibLine.y1); ctx.stroke();
+  ctx.fillStyle='rgba(255,214,0,0.85)'; ctx.font='bold 11px monospace'; ctx.textAlign='center';
+  ctx.fillText('1m', x, calibLine.y1 - 7);
+  ctx.restore();
+}
+
 function drawSkeleton(lm) {
   const segs=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28]];
   ctx.save(); ctx.strokeStyle='rgba(0,255,135,0.5)'; ctx.lineWidth=2; ctx.lineCap='round';
@@ -248,18 +358,16 @@ function drawSkeleton(lm) {
   ctx.restore();
 }
 
-function drawHip(x, y) { // marca os pés
+function drawFeet(x, y) {
   ctx.save();
-  ctx.strokeStyle = phase==='detecting'?'#00d4ff':'#00ff87';
-  ctx.lineWidth=2;
+  ctx.strokeStyle = phase==='detecting'?'#00d4ff':'#00ff87'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x-16,y); ctx.lineTo(x+16,y); ctx.moveTo(x,y-16); ctx.lineTo(x,y+16); ctx.stroke();
-  // live cm label
   if (baseline && pxPerCm) {
     const d = baseline - y;
     if (d > 5) {
       ctx.fillStyle='#00d4ff'; ctx.font='bold 14px monospace'; ctx.textAlign='left';
-      ctx.fillText(`↑ ${(d/pxPerCm).toFixed(1)}cm`, x+18, y+5);
+      ctx.fillText('up ' + (d/pxPerCm).toFixed(1) + 'cm', x+18, y+5);
     }
   }
   ctx.restore();
@@ -273,13 +381,13 @@ function drawArrow(x, peakY, baseY) {
   ctx.moveTo(x-30,peakY); ctx.lineTo(x-38,peakY+14); ctx.lineTo(x-22,peakY+14); ctx.closePath(); ctx.fill();
   if (pxPerCm) {
     ctx.fillStyle='#fff'; ctx.font='bold 15px monospace'; ctx.textAlign='center';
-    ctx.fillText(`${((baseY-peakY)/pxPerCm).toFixed(1)}cm`, x-30, (peakY+baseY)/2);
+    ctx.fillText(((baseY-peakY)/pxPerCm).toFixed(1)+'cm', x-30, (peakY+baseY)/2);
   }
   ctx.restore();
 }
 
-// ── INIT
 async function init() {
+  loadCalib();
   status.textContent='Carregando MediaPipe...';
   const pose = new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
   pose.setOptions({modelComplexity:0, smoothLandmarks:true, minDetectionConfidence:.5, minTrackingConfidence:.5});
@@ -287,7 +395,7 @@ async function init() {
   const cam = new Camera(video, {
     onFrame: async () => { await pose.send({image:video}); },
     width: 640, height: 480,
-    facingMode: "environment",
+    facingMode: 'environment',
   });
   await cam.start();
   video.style.opacity = '1';
@@ -297,3 +405,4 @@ init().catch(e=>{ status.textContent='Erro: '+e.message; console.error(e); });
 </script>
 </body>
 </html>
+
