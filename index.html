@@ -533,17 +533,18 @@ async function init() {
     if (!poseReady) {
       poseReady = true;
       clearTimeout(timeoutId);
-      status.textContent = '3/3 Modelo carregado!';
-      setTimeout(() => setPhase('ready'), 500);
+      setTimeout(() => setPhase('ready'), 300);
     }
     onResults(res);
   });
 
-  // ── 3. LOOP DE FRAMES ──────────────────────────────────────
-  status.textContent = '3/3 Iniciando deteccao...';
+  status.textContent = '2/3 Baixando modelo... (10-20s na primeira vez)';
+  try { await pose.initialize(); } catch(e) { /* ok se nao existir */ }
+  status.textContent = '3/3 Processando frames...';
+
   async function loop() {
     if (video.readyState >= 2) {
-      await pose.send({ image: video });
+      try { await pose.send({ image: video }); } catch(e) {}
     }
     requestAnimationFrame(loop);
   }
