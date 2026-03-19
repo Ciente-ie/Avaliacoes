@@ -280,22 +280,18 @@ function drawArrow(x, peakY, baseY) {
 
 // ── INIT
 async function init() {
-  status.textContent='Iniciando câmera…';
-  const stream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false});
-  video.srcObject=stream;
-  await new Promise(r=>video.onloadedmetadata=r);
-  video.play();
-
-  status.textContent='Carregando MediaPipe…';
+  status.textContent='Carregando MediaPipe...';
   const pose = new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
   pose.setOptions({modelComplexity:0, smoothLandmarks:true, minDetectionConfidence:.5, minTrackingConfidence:.5});
   pose.onResults(onResults);
-
-  const cam = new Camera(video,{onFrame:async()=>{await pose.send({image:video});},width:640,height:480});
+  const cam = new Camera(video, {
+    onFrame: async () => { await pose.send({image:video}); },
+    width: 640, height: 480,
+  });
   await cam.start();
+  video.style.opacity = '1';
   setPhase('ready');
 }
-
 init().catch(e=>{ status.textContent='Erro: '+e.message; console.error(e); });
 </script>
 </body>
