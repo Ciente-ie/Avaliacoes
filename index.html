@@ -488,20 +488,69 @@ function drawArrow(x, peakY, baseY) {
 
 async function init() {
   loadCalib();
-  status.textContent='Carregando MediaPipe...';
-  const pose = new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
-  pose.setOptions({modelComplexity:0, smoothLandmarks:true, minDetectionConfidence:.5, minTrackingConfidence:.5});
-  pose.onResults(onResults);
-  const cam = new Camera(video, {
-    onFrame: async () => { await pose.send({image:video}); },
-    width: 640, height: 480,
-    facingMode: 'environment',
-  });
-  await cam.start();
+
+  // ── 1. CÂMERA ──────────────────────────────────────────────
+  status.textContent = '1/3 Iniciando camera...';
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false
+    });
+  } catch(e1) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    } catch(e2) {
+      status.textContent = 'Erro: camera nao disponivel. ' + e2.message;
+      return;
+    }
+  }
+  video.srcObject = stream;
+  await new Promise(r => { video.onloadedmetadata = r; });
+  await video.play();
   video.style.opacity = '1';
-  setPhase('ready');
+  status.textContent = '2/3 Camera ok. Carregando modelo de pose...';
+
+  // ── 2. MEDIAPIPE ───────────────────────────────────────────
+  // Timeout de 20s para detectar CDN lento
+  let poseReady = false;
+  const timeoutId = setTimeout(() => {
+    if (!poseReady) {
+      status.textContent = 'Erro: modelo demorou demais. Verifique sua conexao e recarregue.';
+    }
+  }, 20000);
+
+  const pose = new Pose({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`
+  });
+  pose.setOptions({
+    modelComplexity: 0,
+    smoothLandmarks: true,
+    minDetectionConfidence: .5,
+    minTrackingConfidence: .5
+  });
+  pose.onResults(res => {
+    if (!poseReady) {
+      poseReady = true;
+      clearTimeout(timeoutId);
+      status.textContent = '3/3 Modelo carregado!';
+      setTimeout(() => setPhase('ready'), 500);
+    }
+    onResults(res);
+  });
+
+  // ── 3. LOOP DE FRAMES ──────────────────────────────────────
+  status.textContent = '3/3 Iniciando deteccao...';
+  async function loop() {
+    if (video.readyState >= 2) {
+      await pose.send({ image: video });
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
 }
-init().catch(e=>{ status.textContent='Erro: '+e.message; console.error(e); });
+
+init().catch(e => { status.textContent = 'Erro: ' + e.message; console.error(e); });
 </script>
 </body>
 </html>
