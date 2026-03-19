@@ -39,62 +39,136 @@
   #history { display:flex; gap:8px; align-items:flex-end; height:36px; }
   .hbar { width:18px; background:rgba(0,255,135,0.2); border-radius:3px 3px 0 0; min-height:4px; }
   .hbar.last { background:#00ff87; }
-  /* overlay calibracao */
-  #calib-overlay {
-    position:fixed; inset:0; z-index:20; display:none;
-    flex-direction:column; align-items:center; justify-content:center;
-    background:rgba(0,0,0,0.82); gap:20px; padding:32px; text-align:center;
-    pointer-events:all;
+
+  /* ── CALIBRAÇÃO ─────────────────────────────────────────── */
+  /* Tela preta durante calibração */
+  body.calibrating #ui  { display:none; }
+  body.calibrating #log { display:none; }
+  body.calibrating #video  { opacity:0; }
+  body.calibrating #canvas { opacity:0; }
+
+  #calib-screen {
+    display:none;
+    position:fixed; inset:0; z-index:30;
+    background:#000;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:32px 24px;
+    gap:0;
   }
-  #calib-overlay.show { display:flex; }
-  #calib-overlay.tap-mode { background:rgba(0,0,0,0.35); pointer-events:none; }
-  #calib-overlay .ctl { font-size:22px; font-weight:bold; color:#ffd600; }
-  #calib-overlay .csub { font-size:13px; color:#ccc; line-height:1.8; max-width:280px; }
-  #calib-pts {
-    font-size:28px; font-weight:bold; color:#ffd600;
-    width:56px; height:56px; border-radius:50%;
-    border:2px solid #ffd600; display:flex; align-items:center; justify-content:center;
-    margin:0 auto;
+  #calib-screen.show { display:flex; }
+
+  /* tela de instrução (step 1 / step 2) */
+  #calib-instr-screen {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:24px;
+    width:100%;
+    max-width:320px;
+    text-align:center;
   }
-  #calib-instruction {
-    font-size:15px; color:#fff; font-weight:bold; letter-spacing:0.05em;
-    background:rgba(255,214,0,0.15); border:1px solid rgba(255,214,0,0.5);
-    border-radius:8px; padding:10px 20px;
+  #calib-instr-screen.hide { display:none; }
+
+  .calib-step-label {
+    font-size:11px; letter-spacing:0.15em; color:#555; text-transform:uppercase;
   }
-  #btn-calib-cancel {
-    padding:8px 20px; border-radius:20px; border:1px solid rgba(255,255,255,0.3);
-    background:transparent; color:#aaa; font-family:monospace; font-size:11px;
-    cursor:pointer; pointer-events:all;
+  .calib-step-num {
+    width:52px; height:52px; border-radius:50%;
+    border:2px solid #ffd600;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:bold; color:#ffd600;
+  }
+  .calib-title {
+    font-size:20px; font-weight:bold; color:#fff; line-height:1.3;
+  }
+  .calib-sub {
+    font-size:13px; color:#777; line-height:1.7;
+  }
+  .calib-divider {
+    width:40px; height:1px; background:rgba(255,255,255,0.1);
   }
   #btn-calib-next {
-    padding:12px 28px; border-radius:8px; border:none;
-    background:#ffd600; color:#000; font-family:monospace; font-size:13px;
-    font-weight:bold; cursor:pointer; pointer-events:all;
-    -webkit-tap-highlight-color:transparent;
+    width:100%; padding:16px;
+    border-radius:8px; border:none;
+    background:#ffd600; color:#000;
+    font-family:monospace; font-size:13px; font-weight:bold;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    letter-spacing:0.05em;
   }
-  /* indicador fixo durante o toque */
-  #calib-tap-hint {
-    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    z-index:21; display:none; flex-direction:column; align-items:center; gap:8px;
-    pointer-events:none;
-  }
-  #calib-tap-hint.show { display:flex; }
-  #calib-tap-hint .hint-ring {
-    width:60px; height:60px; border-radius:50%;
-    border:3px solid #ffd600; animation:ring-pulse 1s infinite;
-  }
-  #calib-tap-hint .hint-label {
-    font-size:13px; font-weight:bold; color:#ffd600;
-    background:rgba(0,0,0,0.7); padding:4px 12px; border-radius:20px;
-  }
-  @keyframes ring-pulse {
-    0%,100% { transform:scale(1); opacity:1; }
-    50%      { transform:scale(1.15); opacity:0.7; }
+  #btn-calib-cancel {
+    padding:10px 20px; border-radius:20px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:transparent; color:#555;
+    font-family:monospace; font-size:11px;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
   }
 
-  /* esconde tudo durante calibracao */
-  body.calibrating #ui { display:none; }
-  body.calibrating #log { display:none; }
+  /* tela de toque: câmera + crosshair */
+  #calib-tap-screen {
+    display:none;
+    position:absolute; inset:0;
+    flex-direction:column;
+    align-items:stretch;
+  }
+  #calib-tap-screen.show { display:flex; }
+
+  /* video/canvas clone visível apenas nessa fase */
+  #calib-video-bg {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    opacity:0.85;
+  }
+  #calib-canvas-bg {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+  }
+
+  /* barra inferior durante toque */
+  #calib-tap-bar {
+    position:absolute; bottom:0; left:0; right:0;
+    padding:20px 24px 32px;
+    background:linear-gradient(transparent, rgba(0,0,0,0.92));
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    pointer-events:none;
+  }
+  #calib-tap-label {
+    font-size:15px; font-weight:bold; color:#ffd600;
+    letter-spacing:0.06em;
+  }
+  #calib-tap-sub {
+    font-size:12px; color:rgba(255,255,255,0.45);
+  }
+
+  /* crosshair grande animado */
+  #calib-crosshair {
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    width:64px; height:64px;
+    pointer-events:none;
+  }
+  #calib-crosshair .ring {
+    position:absolute; inset:0; border-radius:50%;
+    border:2px solid #ffd600;
+    animation:ch-pulse 1.2s ease-in-out infinite;
+  }
+  #calib-crosshair .ring2 {
+    position:absolute; inset:12px; border-radius:50%;
+    border:1px solid rgba(255,214,0,0.4);
+    animation:ch-pulse 1.2s ease-in-out infinite 0.3s;
+  }
+  #calib-crosshair .dot {
+    position:absolute; top:50%; left:50%;
+    width:6px; height:6px; border-radius:50%;
+    background:#ffd600;
+    transform:translate(-50%,-50%);
+  }
+  @keyframes ch-pulse {
+    0%,100% { transform:scale(1); opacity:1; }
+    50%      { transform:scale(1.18); opacity:0.5; }
+  }
 </style>
 </head>
 <body>
@@ -110,18 +184,35 @@
   <div id="log-calib">calib: aguardando</div>
 </div>
 
-<div id="calib-overlay">
-  <div class="ctl">CALIBRAR ESCALA</div>
-  <div class="csub">Posicione a camera de frente para a fita de 1m na parede. Siga os passos.</div>
-  <div id="calib-pts">1</div>
-  <div id="calib-instruction">Toque na ponta INFERIOR da fita</div>
-  <button id="btn-calib-next">PROXIMO PASSO</button>
-  <button id="btn-calib-cancel">CANCELAR</button>
-</div>
+<!-- TELA DE CALIBRAÇÃO -->
+<div id="calib-screen">
 
-<div id="calib-tap-hint">
-  <div class="hint-ring"></div>
-  <div class="hint-label" id="hint-label">Toque na fita</div>
+  <!-- Fase instrução -->
+  <div id="calib-instr-screen">
+    <div class="calib-step-label">Calibração de escala</div>
+    <div class="calib-step-num" id="calib-step-num">1</div>
+    <div class="calib-divider"></div>
+    <div class="calib-title" id="calib-title">Toque na ponta INFERIOR da fita</div>
+    <div class="calib-sub" id="calib-sub">Use uma fita de 1 metro na parede. No próximo passo, toque exatamente no ponto inferior da fita.</div>
+    <button id="btn-calib-next">TOCAR NA TELA</button>
+    <button id="btn-calib-cancel">CANCELAR</button>
+  </div>
+
+  <!-- Fase toque -->
+  <div id="calib-tap-screen">
+    <video id="calib-video-bg" playsinline autoplay muted></video>
+    <canvas id="calib-canvas-bg"></canvas>
+    <div id="calib-crosshair">
+      <div class="ring"></div>
+      <div class="ring2"></div>
+      <div class="dot"></div>
+    </div>
+    <div id="calib-tap-bar">
+      <div id="calib-tap-label">TOQUE NA PONTA INFERIOR</div>
+      <div id="calib-tap-sub">Toque direto na fita na tela</div>
+    </div>
+  </div>
+
 </div>
 
 <div id="ui">
@@ -150,11 +241,23 @@ const logPes  = document.getElementById('log-pes');
 const logPhase= document.getElementById('log-phase');
 const logCalib= document.getElementById('log-calib');
 const histEl  = document.getElementById('history');
-const calibOverlay = document.getElementById('calib-overlay');
+
+const calibScreen     = document.getElementById('calib-screen');
+const calibInstrScr   = document.getElementById('calib-instr-screen');
+const calibTapScr     = document.getElementById('calib-tap-screen');
+const calibStepNum    = document.getElementById('calib-step-num');
+const calibTitle      = document.getElementById('calib-title');
+const calibSub        = document.getElementById('calib-sub');
+const calibTapLabel   = document.getElementById('calib-tap-label');
+const calibTapSub     = document.getElementById('calib-tap-sub');
+const calibVideoBg    = document.getElementById('calib-video-bg');
+const calibCanvasBg   = document.getElementById('calib-canvas-bg');
+const calibCrosshair  = document.getElementById('calib-crosshair');
+const btnCalibNext    = document.getElementById('btn-calib-next');
+const ctxCalib        = calibCanvasBg.getContext('2d');
 
 // estado
 let phase    = 'loading';
-let calibTapMode = false;  // pausa o loop durante o toque de calibracao
 let baseline = null;
 let peakY    = null;
 let buf      = [];
@@ -165,13 +268,13 @@ let fps      = 0;
 let results  = [];
 let pxPerCm     = null;
 let calibByTape = false;
-let calibLine   = null; // {y0, y1} no espaco canvas (y0=inferior, y1=superior)
+let calibLine   = null;
+let calibTapMode = false;
 
 const STORAGE_KEY = 'cmj_pxPerCm_v2';
 const L_ANKLE=27, R_ANKLE=28, L_SHOULDER=11, R_SHOULDER=12;
 const BUF_N = 25;
 
-// persistencia
 function loadCalib() {
   const v = localStorage.getItem(STORAGE_KEY);
   if (v) {
@@ -201,22 +304,9 @@ function updateCalibBtn() {
   btnCalib.textContent = calibByTape ? 'RECALIBRAR' : 'CALIBRAR FITA';
 }
 
-// ── CALIBRAÇÃO PASSO A PASSO ────────────────────────────────────────────────
-// Fluxo:
-//   Passo 1 — overlay explica, botao "PROXIMO" esconde overlay e entra em modo toque
-//   Modo toque — overlay semitransparente, indicador animado, usuario toca na tela
-//   Ponto 1 registrado — volta overlay para passo 2
-//   Passo 2 — botao "PROXIMO" para ponto 2
-//   Ponto 2 registrado — calcula e finaliza
-
+// ── CALIBRAÇÃO ──────────────────────────────────────────────────────────────
 let calibTaps = [];
-let calibStep = 0;   // 0=inativo, 1=aguardando toque 1, 2=aguardando toque 2
-
-const calibPtsEl    = document.getElementById('calib-pts');
-const calibInstr    = document.getElementById('calib-instruction');
-const btnCalibNext  = document.getElementById('btn-calib-next');
-const calibTapHint  = document.getElementById('calib-tap-hint');
-const hintLabel     = document.getElementById('hint-label');
+let calibStep = 0;
 
 btnCalib.addEventListener('click', startCalib);
 document.getElementById('btn-calib-cancel').addEventListener('click', cancelCalib);
@@ -224,113 +314,114 @@ btnCalibNext.addEventListener('click', goToTapMode);
 
 function startCalib() {
   calibTaps = [];
-  calibStep = 0;
-  showStep(1);
-  calibOverlay.classList.add('show');
-  calibOverlay.classList.remove('tap-mode');
+  calibStep = 1;
+  showInstrStep(1);
+  calibScreen.classList.add('show');
+  calibInstrScr.classList.remove('hide');
+  calibTapScr.classList.remove('show');
   document.body.classList.add('calibrating');
+  // espelha stream para o video de fundo da calibração
+  calibVideoBg.srcObject = video.srcObject;
 }
 
-function showStep(step) {
+function showInstrStep(step) {
   calibStep = step;
-  calibPtsEl.textContent = String(step);
-  btnCalibNext.style.display = 'block';
-  calibTapHint.classList.remove('show');
-
+  calibStepNum.textContent = String(step);
   if (step === 1) {
-    calibInstr.textContent = 'Toque na ponta INFERIOR da fita (nivel do chao)';
-    hintLabel.textContent  = 'Toque na PONTA INFERIOR';
+    calibTitle.textContent = 'Toque na ponta INFERIOR da fita';
+    calibSub.textContent   = 'Use uma fita de 1 metro na parede. No próximo passo, toque exatamente no ponto inferior da fita na câmera ao vivo.';
   } else {
-    calibInstr.textContent = 'Agora toque na ponta SUPERIOR da fita (1 metro acima)';
-    hintLabel.textContent  = 'Toque na PONTA SUPERIOR';
+    calibTitle.textContent = 'Toque na ponta SUPERIOR da fita';
+    calibSub.textContent   = 'Agora toque no ponto mais alto da fita. O sistema vai calcular a escala automaticamente.';
   }
+  calibInstrScr.classList.remove('hide');
+  calibTapScr.classList.remove('show');
 }
 
 function goToTapMode() {
+  calibInstrScr.classList.add('hide');
+  calibTapScr.classList.add('show');
+
+  // atualiza labels
+  if (calibStep === 1) {
+    calibTapLabel.textContent = 'TOQUE NA PONTA INFERIOR';
+    calibTapSub.textContent   = 'Toque direto na fita na tela';
+  } else {
+    calibTapLabel.textContent = 'TOQUE NA PONTA SUPERIOR';
+    calibTapSub.textContent   = 'Toque direto na fita na tela';
+  }
+
   calibTapMode = true;
-  // limpa canvas para tela limpa
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  calibOverlay.classList.add('tap-mode');
-  btnCalibNext.style.display = 'none';
-  calibTapHint.classList.add('show');
-  // registra o toque na tela inteira (nao no canvas espelhado)
-  document.addEventListener('touchstart', onCalibTap, { once: true, passive: false });
-  document.addEventListener('click',      onCalibTap, { once: true });
+  // sincroniza tamanho do canvas de calibração
+  calibCanvasBg.width  = calibVideoBg.videoWidth  || 640;
+  calibCanvasBg.height = calibVideoBg.videoHeight || 480;
+
+  calibTapScr.addEventListener('touchstart', onCalibTap, { once: true, passive: false });
+  calibTapScr.addEventListener('click',      onCalibTap, { once: true });
 }
 
 function onCalibTap(e) {
   e.preventDefault();
-  calibTapHint.classList.remove('show');
+  calibTapMode = false;
 
-  // pega coordenadas do toque
   let clientX, clientY;
   if (e.touches && e.touches.length > 0) {
-    clientX = e.touches[0].clientX;
-    clientY = e.touches[0].clientY;
+    clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
   } else {
-    clientX = e.clientX;
-    clientY = e.clientY;
+    clientX = e.clientX; clientY = e.clientY;
   }
 
-  // converte para coordenadas do canvas (corrigindo espelhamento CSS scaleX(-1))
-  const rect = canvas.getBoundingClientRect();
+  const rect = calibTapScr.getBoundingClientRect();
   const xDisp = clientX - rect.left;
   const yDisp = clientY - rect.top;
-  // canvas nao esta espelhado
-  const xCv = (xDisp / rect.width)  * canvas.width;
-  const yCv = (yDisp / rect.height) * canvas.height;
 
+  calibCanvasBg.width  = calibVideoBg.videoWidth  || 640;
+  calibCanvasBg.height = calibVideoBg.videoHeight || 480;
+
+  const xCv = (xDisp / rect.width)  * calibCanvasBg.width;
+  const yCv = (yDisp / rect.height) * calibCanvasBg.height;
   calibTaps.push({ xCv, yCv });
 
-  // dot de feedback
-  const xDot = xCv;
-  const yDot = yCv;
-  ctx.save();
-  ctx.fillStyle = '#ffd600';
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(xDot, yDot, 16, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
-  ctx.fillText(String(calibTaps.length), xDot, yDot + 5);
-  ctx.restore();
+  // move crosshair para onde o usuário tocou (feedback visual)
+  calibCrosshair.style.left = clientX + 'px';
+  calibCrosshair.style.top  = clientY + 'px';
+  calibCrosshair.style.transform = 'translate(-50%,-50%) scale(1.4)';
+  calibCrosshair.style.transition = 'transform 0.15s ease';
+  setTimeout(() => { calibCrosshair.style.transform = 'translate(-50%,-50%) scale(1)'; }, 150);
 
-  calibTapMode = false;
   if (calibTaps.length === 1) {
-    // volta overlay para passo 2
-    calibOverlay.classList.remove('tap-mode');
-    showStep(2);
+    // breve pausa antes de ir para passo 2
+    setTimeout(() => showInstrStep(2), 400);
   } else {
-    finishCalib();
+    setTimeout(finishCalib, 250);
   }
 }
 
 function cancelCalib() {
   calibTapMode = false;
   document.body.classList.remove('calibrating');
-  calibOverlay.classList.remove('show');
-  calibOverlay.classList.remove('tap-mode');
-  calibTapHint.classList.remove('show');
-  calibStep = 0;
+  calibScreen.classList.remove('show');
+  calibInstrScr.classList.remove('hide');
+  calibTapScr.classList.remove('show');
   calibTaps = [];
-  document.removeEventListener('touchstart', onCalibTap);
-  document.removeEventListener('click',      onCalibTap);
+  calibStep = 0;
+  calibTapScr.removeEventListener('touchstart', onCalibTap);
+  calibTapScr.removeEventListener('click',      onCalibTap);
 }
 
 function finishCalib() {
   document.body.classList.remove('calibrating');
-  calibOverlay.classList.remove('show');
-  calibOverlay.classList.remove('tap-mode');
+  calibScreen.classList.remove('show');
+  calibInstrScr.classList.remove('hide');
+  calibTapScr.classList.remove('show');
 
   const dy = Math.abs(calibTaps[1].yCv - calibTaps[0].yCv);
   pxPerCm = dy / 100;
   calibByTape = true;
-
   calibLine = {
     y0: Math.max(calibTaps[0].yCv, calibTaps[1].yCv),
     y1: Math.min(calibTaps[0].yCv, calibTaps[1].yCv),
   };
-
   saveCalib(pxPerCm);
   updateCalibBtn();
   logCalib.textContent = 'calib: fita (' + pxPerCm.toFixed(2) + ' px/cm)';
@@ -338,13 +429,12 @@ function finishCalib() {
   setPhase('ready');
 }
 
-// fallback: estima px/cm pela proporcao corporal
+// ── LÓGICA DE MEDIÇÃO (inalterada) ──────────────────────────────────────────
 function estimatePxPerCm(lm) {
   const sy = ((lm[L_SHOULDER].y + lm[R_SHOULDER].y)/2) * canvas.height;
   const ay = ((lm[L_ANKLE].y   + lm[R_ANKLE].y  )/2) * canvas.height;
   return Math.abs(ay - sy) / 145;
 }
-
 function getTrackY(lm) { return ((lm[L_ANKLE].y + lm[R_ANKLE].y)/2) * canvas.height; }
 function getTrackX(lm) { return ((lm[L_ANKLE].x + lm[R_ANKLE].x)/2) * canvas.width; }
 
@@ -355,7 +445,7 @@ btn.addEventListener('click', () => {
 });
 
 function onResults(res) {
-  if (calibTapMode) return;  // tela limpa durante calibracao
+  if (calibTapMode) return;
   const now = performance.now();
   fps = lastT ? Math.round(1000/(now-lastT)) : 0;
   lastT = now;
@@ -378,7 +468,6 @@ function onResults(res) {
   const hx = getTrackX(lm);
   logPes.textContent = 'pes: ' + Math.round(hy) + 'px';
 
-  // fallback se nao calibrou pela fita
   if (!calibByTape && lm[L_SHOULDER].visibility > 0.7 && lm[L_ANKLE].visibility > 0.7) {
     pxPerCm = estimatePxPerCm(lm);
     logCalib.textContent = 'calib: estimada (' + pxPerCm.toFixed(2) + 'px/cm)';
@@ -505,8 +594,6 @@ function drawArrow(x, peakY, baseY) {
 
 async function init() {
   loadCalib();
-
-  // ── 1. CÂMERA ──────────────────────────────────────────────
   status.textContent = '1/3 Iniciando camera...';
   let stream;
   try {
@@ -525,16 +612,11 @@ async function init() {
   video.srcObject = stream;
   await new Promise(r => { video.onloadedmetadata = r; });
   await video.play();
-  video.style.opacity = '1';
   status.textContent = '2/3 Camera ok. Carregando modelo de pose...';
 
-  // ── 2. MEDIAPIPE ───────────────────────────────────────────
-  // Timeout de 20s para detectar CDN lento
   let poseReady = false;
   const timeoutId = setTimeout(() => {
-    if (!poseReady) {
-      status.textContent = 'Erro: modelo demorou demais. Verifique sua conexao e recarregue.';
-    }
+    if (!poseReady) status.textContent = 'Erro: modelo demorou demais. Verifique sua conexao e recarregue.';
   }, 20000);
 
   const pose = new Pose({
@@ -556,7 +638,7 @@ async function init() {
   });
 
   status.textContent = '2/3 Baixando modelo... (10-20s na primeira vez)';
-  try { await pose.initialize(); } catch(e) { /* ok se nao existir */ }
+  try { await pose.initialize(); } catch(e) {}
   status.textContent = '3/3 Processando frames...';
 
   async function loop() {
