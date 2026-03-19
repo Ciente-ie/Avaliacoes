@@ -91,6 +91,10 @@
     0%,100% { transform:scale(1); opacity:1; }
     50%      { transform:scale(1.15); opacity:0.7; }
   }
+
+  /* esconde tudo durante calibracao */
+  body.calibrating #ui { display:none; }
+  body.calibrating #log { display:none; }
 </style>
 </head>
 <body>
@@ -224,6 +228,7 @@ function startCalib() {
   showStep(1);
   calibOverlay.classList.add('show');
   calibOverlay.classList.remove('tap-mode');
+  document.body.classList.add('calibrating');
 }
 
 function showStep(step) {
@@ -302,6 +307,7 @@ function onCalibTap(e) {
 
 function cancelCalib() {
   calibTapMode = false;
+  document.body.classList.remove('calibrating');
   calibOverlay.classList.remove('show');
   calibOverlay.classList.remove('tap-mode');
   calibTapHint.classList.remove('show');
@@ -312,6 +318,7 @@ function cancelCalib() {
 }
 
 function finishCalib() {
+  document.body.classList.remove('calibrating');
   calibOverlay.classList.remove('show');
   calibOverlay.classList.remove('tap-mode');
 
