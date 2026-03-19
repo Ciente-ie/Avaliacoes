@@ -7,8 +7,8 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#000; color:#fff; font-family:monospace; height:100dvh; overflow:hidden; }
-  #video { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
-  #canvas { position:fixed; inset:0; width:100%; height:100%; transform:scaleX(-1); }
+  #video { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; }
+  #canvas { position:fixed; inset:0; width:100%; height:100%; }
   #ui {
     position:fixed; bottom:0; left:0; right:0; padding:16px;
     background:linear-gradient(transparent, rgba(0,0,0,0.88));
@@ -150,6 +150,7 @@ const calibOverlay = document.getElementById('calib-overlay');
 
 // estado
 let phase    = 'loading';
+let calibTapMode = false;  // pausa o loop durante o toque de calibracao
 let baseline = null;
 let peakY    = null;
 let buf      = [];
@@ -241,7 +242,9 @@ function showStep(step) {
 }
 
 function goToTapMode() {
-  // esconde overlay (semitransparente), mostra indicador animado
+  calibTapMode = true;
+  // limpa canvas para tela limpa
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   calibOverlay.classList.add('tap-mode');
   btnCalibNext.style.display = 'none';
   calibTapHint.classList.add('show');
@@ -268,15 +271,15 @@ function onCalibTap(e) {
   const rect = canvas.getBoundingClientRect();
   const xDisp = clientX - rect.left;
   const yDisp = clientY - rect.top;
-  // canvas esta espelhado: x real = largura - x display (normalizado)
-  const xCv = canvas.width  - (xDisp / rect.width)  * canvas.width;
-  const yCv =                  (yDisp / rect.height) * canvas.height;
+  // canvas nao esta espelhado
+  const xCv = (xDisp / rect.width)  * canvas.width;
+  const yCv = (yDisp / rect.height) * canvas.height;
 
   calibTaps.push({ xCv, yCv });
 
-  // dot de feedback (no espaco de display — canvas espelhado)
-  const xDot = (xDisp / rect.width)  * canvas.width;
-  const yDot = (yDisp / rect.height) * canvas.height;
+  // dot de feedback
+  const xDot = xCv;
+  const yDot = yCv;
   ctx.save();
   ctx.fillStyle = '#ffd600';
   ctx.strokeStyle = '#000';
@@ -287,6 +290,7 @@ function onCalibTap(e) {
   ctx.fillText(String(calibTaps.length), xDot, yDot + 5);
   ctx.restore();
 
+  calibTapMode = false;
   if (calibTaps.length === 1) {
     // volta overlay para passo 2
     calibOverlay.classList.remove('tap-mode');
@@ -297,6 +301,7 @@ function onCalibTap(e) {
 }
 
 function cancelCalib() {
+  calibTapMode = false;
   calibOverlay.classList.remove('show');
   calibOverlay.classList.remove('tap-mode');
   calibTapHint.classList.remove('show');
@@ -343,6 +348,7 @@ btn.addEventListener('click', () => {
 });
 
 function onResults(res) {
+  if (calibTapMode) return;  // tela limpa durante calibracao
   const now = performance.now();
   fps = lastT ? Math.round(1000/(now-lastT)) : 0;
   lastT = now;
