@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>CMJ Teste</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000; color:#fff; font-family: monospace; height:100dvh; overflow:hidden; }
+
+  #video { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+  #canvas { position:fixed; inset:0; width:100%; height:100%; transform:scaleX(-1); }
+
+  #ui {
+    position:fixed; bottom:0; left:0; right:0;
+    padding:16px;
+    background:linear-gradient(transparent, rgba(0,0,0,0.85));
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+    z-index:10;
+  }
+
+  #result {
+    font-size:64px; font-weight:bold;
+    color:#00ff87;
+    text-shadow: 0 0 30px rgba(0,255,135,0.5);
+    line-height:1;
+  }
+  #result span { font-size:18px; color:#888; display:block; text-align:center; }
+
+  #status { font-size:13px; color:#aaa; letter-spacing:0.05em; text-align:center; }
+
+  #btn {
+    width:70px; height:70px; border-radius:50%;
+    border:2px solid #00ff87;
+    background:rgba(0,255,135,0.1);
+    color:#00ff87; font-size:11px; font-weight:bold;
+    letter-spacing:0.05em; cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #btn.armed { border-color:#00d4ff; color:#00d4ff; background:rgba(0,212,255,0.15); }
+  #btn.detecting { border-color:#ff3d5a; color:#ff3d5a; background:rgba(255,61,90,0.12); }
+
+  #log {
+    position:fixed; top:12px; left:12px;
+    font-size:11px; color:rgba(255,255,255,0.4);
+    line-height:1.6; z-index:10;
+  }
+
+  #history {
+    display:flex; gap:8px; align-items:flex-end; height:36px;
+  }
+  .hbar {
+    width:18px; background:rgba(0,255,135,0.2);
+    border-radius:3px 3px 0 0; min-height:4px;
+  }
+  .hbar.last { background:#00ff87; }
+</style>
+</head>
+<body>
+
+<video id="video" playsinline autoplay muted></video>
+<canvas id="canvas"></canvas>
+
+<div id="log" id="log">
+  <div id="log-pose">pose: –</div>
+  <div id="log-fps">fps: –</div>
+  <div id="log-hip">quadril: –</div>
+  <div id="log-phase">fase: carregando</div>
+</div>
+
+<div id="ui">
+  <div id="history"></div>
+  <div id="result">–<span>cm (altura do salto)</span></div>
+  <div id="status">Aguarde o carregamento…</div>
+  <button id="btn">MEDIR</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+<script>
+const video  = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const btn    = document.getElementById('btn');
+const status = document.getElementById('status');
+const result = document.getElementById('result');
+const logPose  = document.getElementById('log-pose');
+const logFps   = document.getElementById('log-fps');
+const logHip   = document.getElementById('log-hip');
+const logPhase = document.getElementById('log-phase');
+const histEl   = document.getElementById('history');
+
+// ── STATE
+let phase = 'loading'; // loading | ready | armed | detecting
+let baseline = null;   // média do quadril em pé (px)
+let peakY    = null;   // Y mais alto durante salto
+let buf      = [];
+let landingN = 0;
+let jumpStart= 0;
+let lastT    = 0;
+let fps      = 0;
+// 1 px = ? cm  →  estimado pela altura do corpo (tornozelo ao ombro)
+// sem calibração física, usamos proporção corporal: altura real ~170cm estimada
+let pxPerCm  = null;
+let results  = [];
+
+const L_HIP=23, R_HIP=24, L_ANKLE=27, R_ANKLE=28, L_SHOULDER=11, R_SHOULDER=12;
+const BUF_N = 25;
+
+function setPhase(p) {
+  phase = p;
+  logPhase.textContent = 'fase: ' + p;
+  btn.className = p==='armed'?'armed':p==='detecting'?'detecting':'';
+  const msgs = { ready:'Pressione MEDIR e fique em pé no quadro.', armed:'Pronto — pode saltar!', detecting:'Saltando…', loading:'Carregando…' };
+  status.textContent = msgs[p]||'';
+}
+
+// Calibração por altura corporal: ombro → tornozelo ≈ 145cm (estimativa)
+function estimatePxPerCm(lm) {
+  const sy = ((lm[L_SHOULDER].y + lm[R_SHOULDER].y)/2) * canvas.height;
+  const ay = ((lm[L_ANKLE].y   + lm[R_ANKLE].y  )/2) * canvas.height;
+  const px = Math.abs(ay - sy);
+  return px / 145; // 145cm = ombro→tornozelo médio adulto
+}
+
+// Ponto de rastreamento: tornozelo (média dos dois pés)
+function getTrackY(lm) { return ((lm[L_ANKLE].y + lm[R_ANKLE].y)/2) * canvas.height; }
+function getTrackX(lm) { return ((lm[L_ANKLE].x + lm[R_ANKLE].x)/2) * canvas.width; }
+
+btn.addEventListener('click', () => {
+  if (phase !== 'ready' && phase !== 'armed') return;
+  buf=[]; baseline=null; peakY=null; landingN=0;
+  setPhase('armed');
+});
+
+function onResults(res) {
+  const now = performance.now();
+  fps = lastT ? Math.round(1000/(now-lastT)) : 0;
+  lastT = now;
+
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  logFps.textContent = 'fps: ' + fps;
+
+  if (!res.poseLandmarks) {
+    logPose.textContent = 'pose: não detectada';
+    if (phase==='armed') status.textContent='Posicione-se no quadro…';
+    return;
+  }
+
+  const lm = res.poseLandmarks;
+  logPose.textContent = 'pose: ok';
+
+  const hy = getTrackY(lm);
+  const hx = getTrackX(lm);
+  logHip.textContent = 'pés: ' + Math.round(hy) + 'px';
+
+  // Calibração automática pela proporção corporal
+  if (lm[L_SHOULDER].visibility > 0.7 && lm[L_ANKLE].visibility > 0.7) {
+    pxPerCm = estimatePxPerCm(lm);
+  }
+
+  // Desenhar esqueleto simples
+  drawSkeleton(lm);
+  drawHip(hx, hy);
+
+  // Linha do baseline
+  if (baseline && (phase==='armed'||phase==='detecting')) {
+    ctx.save(); ctx.setLineDash([6,8]); ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,baseline); ctx.lineTo(canvas.width,baseline); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+  }
+
+  // ── MÁQUINA DE ESTADO ──
+  if (phase === 'armed') {
+    buf.push(hy);
+    if (buf.length > BUF_N) buf.shift();
+
+    if (buf.length === BUF_N) {
+      baseline = buf.reduce((a,b)=>a+b,0)/BUF_N;
+      const thr = pxPerCm ? pxPerCm*4 : 25; // 4cm threshold
+      if (hy < baseline - thr) {
+        peakY = hy; jumpStart = now;
+        setPhase('detecting'); landingN=0;
+      } else {
+        status.textContent = 'Pronto — pode saltar!';
+      }
+    } else {
+      status.textContent = `Calibrando (${buf.length}/${BUF_N})…`;
+    }
+  }
+
+  if (phase === 'detecting') {
+    if (hy < peakY) peakY = hy;
+    const thr = pxPerCm ? pxPerCm*4 : 25;
+    if (hy > baseline - thr) {
+      if (++landingN > 4) {
+        const dPx = baseline - peakY;
+        const cm  = pxPerCm ? dPx/pxPerCm : null;
+        showResult(cm, dPx, now-jumpStart);
+        buf=[]; baseline=null; peakY=null; landingN=0;
+        setPhase('ready');
+      }
+    } else { landingN=0; }
+
+    // Seta de altura durante o voo
+    if (peakY && baseline) drawArrow(hx, peakY, baseline);
+  }
+}
+
+function showResult(cm, dPx, flightMs) {
+  const val = cm ? cm.toFixed(1) : '?';
+  result.innerHTML = `${val}<span>cm (altura do salto)</span>`;
+  if (cm) results.push(cm);
+  renderHistory();
+
+  // feedback
+  status.textContent = cm
+    ? `${cm.toFixed(1)} cm · voo ${Math.round(flightMs)}ms · ${fps}fps`
+    : `deslocamento ${Math.round(dPx)}px (sem calibração)`;
+}
+
+function renderHistory() {
+  histEl.innerHTML='';
+  if (!results.length) return;
+  const best=Math.max(...results);
+  results.forEach((v,i)=>{
+    const d=document.createElement('div');
+    d.className='hbar'+(i===results.length-1?' last':'');
+    d.style.height=((v/(best*1.15))*36)+'px';
+    d.title=v.toFixed(1)+'cm';
+    histEl.appendChild(d);
+  });
+}
+
+function drawSkeleton(lm) {
+  const segs=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28]];
+  ctx.save(); ctx.strokeStyle='rgba(0,255,135,0.5)'; ctx.lineWidth=2; ctx.lineCap='round';
+  for (const [a,b] of segs) {
+    const pa=lm[a],pb=lm[b];
+    if (!pa||!pb||pa.visibility<.4||pb.visibility<.4) continue;
+    ctx.beginPath(); ctx.moveTo(pa.x*canvas.width,pa.y*canvas.height);
+    ctx.lineTo(pb.x*canvas.width,pb.y*canvas.height); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawHip(x, y) { // marca os pés
+  ctx.save();
+  ctx.strokeStyle = phase==='detecting'?'#00d4ff':'#00ff87';
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-16,y); ctx.lineTo(x+16,y); ctx.moveTo(x,y-16); ctx.lineTo(x,y+16); ctx.stroke();
+  // live cm label
+  if (baseline && pxPerCm) {
+    const d = baseline - y;
+    if (d > 5) {
+      ctx.fillStyle='#00d4ff'; ctx.font='bold 14px monospace'; ctx.textAlign='left';
+      ctx.fillText(`↑ ${(d/pxPerCm).toFixed(1)}cm`, x+18, y+5);
+    }
+  }
+  ctx.restore();
+}
+
+function drawArrow(x, peakY, baseY) {
+  ctx.save();
+  ctx.strokeStyle='rgba(0,212,255,0.7)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x-30,baseY); ctx.lineTo(x-30,peakY); ctx.stroke();
+  ctx.fillStyle='#00d4ff'; ctx.beginPath();
+  ctx.moveTo(x-30,peakY); ctx.lineTo(x-38,peakY+14); ctx.lineTo(x-22,peakY+14); ctx.closePath(); ctx.fill();
+  if (pxPerCm) {
+    ctx.fillStyle='#fff'; ctx.font='bold 15px monospace'; ctx.textAlign='center';
+    ctx.fillText(`${((baseY-peakY)/pxPerCm).toFixed(1)}cm`, x-30, (peakY+baseY)/2);
+  }
+  ctx.restore();
+}
+
+// ── INIT
+async function init() {
+  status.textContent='Iniciando câmera…';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    video.srcObject=stream;
+  } catch {
+    const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    video.srcObject=stream;
+  }
+  await new Promise(r=>video.onloadedmetadata=r);
+  video.play();
+
+  status.textContent='Carregando MediaPipe…';
+  const pose = new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+  pose.setOptions({modelComplexity:0, smoothLandmarks:true, minDetectionConfidence:.5, minTrackingConfidence:.5});
+  pose.onResults(onResults);
+
+  const cam = new Camera(video,{onFrame:async()=>{await pose.send({image:video});},width:640,height:480});
+  await cam.start();
+  setPhase('ready');
+}
+
+init().catch(e=>{ status.textContent='Erro: '+e.message; console.error(e); });
+</script>
+</body>
+</html>
