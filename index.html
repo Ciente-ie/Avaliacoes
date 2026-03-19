@@ -281,13 +281,8 @@ function drawArrow(x, peakY, baseY) {
 // ── INIT
 async function init() {
   status.textContent='Iniciando câmera…';
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-    video.srcObject=stream;
-  } catch {
-    const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-    video.srcObject=stream;
-  }
+  const stream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false});
+  video.srcObject=stream;
   await new Promise(r=>video.onloadedmetadata=r);
   video.play();
 
