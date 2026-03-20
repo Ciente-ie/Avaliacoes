@@ -319,9 +319,10 @@ document.getElementById('btn-setup-skip').addEventListener('click', () => {
   setupModal.classList.remove('show');
   startCalib();
 });
+// abre o modal de instrucao antes de calibrar
 btnCalib.addEventListener('click', () => {
-  setupModal.classList.add('show');
   document.body.classList.add('calibrating');
+  setupModal.classList.add('show');
 });
 document.getElementById('btn-calib-cancel').addEventListener('click', cancelCalib);
 btnCalibNext.addEventListener('click', goToTapMode);
