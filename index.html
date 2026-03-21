@@ -86,10 +86,12 @@
     50%      { transform:scale(1.15); opacity:0.7; }
   }
 
-  /* esconde tudo durante calibracao */
-  body.calibrating #ui     { display:none !important; }
-  body.calibrating #log    { display:none !important; }
-  body.calibrating #canvas { display:none !important; }
+  /* esconde TUDO durante calibracao — so video e crosshair */
+  body.calibrating > *:not(#video):not(#calib-crosshair):not(#calib-overlay) {
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+  }
 
   /* modal de setup */
   #setup-modal {
