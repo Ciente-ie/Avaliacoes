@@ -43,11 +43,11 @@
   #calib-overlay {
     position:fixed; inset:0; z-index:20; display:none;
     flex-direction:column; align-items:center; justify-content:center;
-    background:rgba(0,0,0,0.82); gap:20px; padding:32px; text-align:center;
+    background:rgba(0,0,0,0.96); gap:20px; padding:32px; text-align:center;
     pointer-events:all;
   }
   #calib-overlay.show { display:flex; }
-  #calib-overlay.tap-mode { background:rgba(0,0,0,0.35); pointer-events:none; }
+  #calib-overlay.tap-mode { background:rgba(0,0,0,0); pointer-events:none; }
   #calib-overlay .ctl { font-size:22px; font-weight:bold; color:#ffd600; }
   #calib-overlay .csub { font-size:13px; color:#ccc; line-height:1.8; max-width:280px; }
   #calib-pts {
@@ -78,14 +78,18 @@
     z-index:21; display:none; flex-direction:column; align-items:center; gap:8px;
     pointer-events:none;
   }
+  /* durante o toque: fundo quase invisivel, so o hint aparece */
+  #calib-overlay.tap-mode > *:not(#calib-tap-hint) { opacity:0; }
   #calib-tap-hint.show { display:flex; }
   #calib-tap-hint .hint-ring {
     width:60px; height:60px; border-radius:50%;
     border:3px solid #ffd600; animation:ring-pulse 1s infinite;
   }
   #calib-tap-hint .hint-label {
-    font-size:13px; font-weight:bold; color:#ffd600;
-    background:rgba(0,0,0,0.7); padding:4px 12px; border-radius:20px;
+    font-size:15px; font-weight:bold; color:#ffd600;
+    background:rgba(0,0,0,0.85); padding:8px 18px; border-radius:20px;
+    border:1px solid rgba(255,214,0,0.5); max-width:280px; line-height:1.4;
+    text-align:center;
   }
   @keyframes ring-pulse {
     0%,100% { transform:scale(1); opacity:1; }
@@ -357,10 +361,10 @@ function showStep(step) {
 
   if (step === 1) {
     calibInstr.textContent = 'Toque na ponta INFERIOR da fita (nivel do chao)';
-    hintLabel.textContent  = 'Toque na PONTA INFERIOR';
+    hintLabel.textContent  = '👇 Toque na PONTA INFERIOR da fita';
   } else {
     calibInstr.textContent = 'Agora toque na ponta SUPERIOR da fita (1 metro acima)';
-    hintLabel.textContent  = 'Toque na PONTA SUPERIOR';
+    hintLabel.textContent  = '👆 Toque na PONTA SUPERIOR da fita';
   }
 }
 
