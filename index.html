@@ -93,8 +93,9 @@
   }
 
   /* esconde tudo durante calibracao */
-  body.calibrating #ui { display:none; }
-  body.calibrating #log { display:none; }
+  body.calibrating #ui     { display:none !important; }
+  body.calibrating #log    { display:none !important; }
+  body.calibrating #canvas { display:none !important; }
 
   /* modal de setup */
   #setup-modal {
@@ -274,6 +275,18 @@ function loadCalib() {
 }
 function saveCalib(v) { localStorage.setItem(STORAGE_KEY, String(v)); }
 
+// zoom via camera API (Android Chrome suporta)
+async function setZoom(level) {
+  try {
+    const track = window._videoTrack;
+    if (!track) return;
+    const caps = track.getCapabilities();
+    if (!caps.zoom) return;
+    const z = Math.min(Math.max(level, caps.zoom.min), caps.zoom.max);
+    await track.applyConstraints({ advanced: [{ zoom: z }] });
+  } catch(e) { /* zoom nao suportado — ignora */ }
+}
+
 function setPhase(p) {
   phase = p;
   logPhase.textContent = 'fase: ' + p;
@@ -353,11 +366,11 @@ function showStep(step) {
 
 function goToTapMode() {
   calibTapMode = true;
-  // limpa canvas para tela limpa
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   calibOverlay.classList.add('tap-mode');
   btnCalibNext.style.display = 'none';
   calibTapHint.classList.add('show');
+  setZoom(2.5);  // zoom in para facilitar o toque na fita
   // registra o toque na tela inteira (nao no canvas espelhado)
   document.addEventListener('touchstart', onCalibTap, { once: true, passive: false });
   document.addEventListener('click',      onCalibTap, { once: true });
@@ -401,8 +414,8 @@ function onCalibTap(e) {
   ctx.restore();
 
   calibTapMode = false;
+  setZoom(1);  // volta zoom ao normal entre os toques
   if (calibTaps.length === 1) {
-    // volta overlay para passo 2
     calibOverlay.classList.remove('tap-mode');
     showStep(2);
   } else {
@@ -412,6 +425,7 @@ function onCalibTap(e) {
 
 function cancelCalib() {
   calibTapMode = false;
+  setZoom(1);
   document.body.classList.remove('calibrating');
   calibOverlay.classList.remove('show');
   calibOverlay.classList.remove('tap-mode');
@@ -423,6 +437,7 @@ function cancelCalib() {
 }
 
 function finishCalib() {
+  setZoom(1);
   document.body.classList.remove('calibrating');
   calibOverlay.classList.remove('show');
   calibOverlay.classList.remove('tap-mode');
@@ -631,6 +646,8 @@ async function init() {
   await new Promise(r => { video.onloadedmetadata = r; });
   await video.play();
   video.style.opacity = '1';
+  // expoe o track de video para zoom
+  window._videoTrack = stream.getVideoTracks()[0];
   status.textContent = '2/3 Camera ok. Carregando modelo de pose...';
 
   // ── 2. MEDIAPIPE ───────────────────────────────────────────
