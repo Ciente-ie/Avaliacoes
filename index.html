@@ -40,39 +40,7 @@
   .hbar { width:18px; background:rgba(0,255,135,0.2); border-radius:3px 3px 0 0; min-height:4px; }
   .hbar.last { background:#00ff87; }
   /* overlay calibracao */
-  #calib-overlay {
-    position:fixed; inset:0; z-index:20; display:none;
-    flex-direction:column; align-items:center; justify-content:center;
-    background:rgba(0,0,0,0.96); gap:20px; padding:32px; text-align:center;
-    pointer-events:all;
-  }
-  #calib-overlay.show { display:flex; }
-  #calib-overlay.tap-mode { background:rgba(0,0,0,0) !important; pointer-events:none; }
-  #calib-overlay.tap-mode > * { display:none !important; }
-  #calib-overlay .ctl { font-size:22px; font-weight:bold; color:#ffd600; }
-  #calib-overlay .csub { font-size:13px; color:#ccc; line-height:1.8; max-width:280px; }
-  #calib-pts {
-    font-size:28px; font-weight:bold; color:#ffd600;
-    width:56px; height:56px; border-radius:50%;
-    border:2px solid #ffd600; display:flex; align-items:center; justify-content:center;
-    margin:0 auto;
-  }
-  #calib-instruction {
-    font-size:15px; color:#fff; font-weight:bold; letter-spacing:0.05em;
-    background:rgba(255,214,0,0.15); border:1px solid rgba(255,214,0,0.5);
-    border-radius:8px; padding:10px 20px;
-  }
-  #btn-calib-cancel {
-    padding:8px 20px; border-radius:20px; border:1px solid rgba(255,255,255,0.3);
-    background:transparent; color:#aaa; font-family:monospace; font-size:11px;
-    cursor:pointer; pointer-events:all;
-  }
-  #btn-calib-next {
-    padding:12px 28px; border-radius:8px; border:none;
-    background:#ffd600; color:#000; font-family:monospace; font-size:13px;
-    font-weight:bold; cursor:pointer; pointer-events:all;
-    -webkit-tap-highlight-color:transparent;
-  }
+
   /* indicador fixo durante o toque */
   /* crosshair durante toque de calibracao */
   #calib-crosshair {
@@ -198,24 +166,16 @@
   <button id="btn-setup-skip">pular (ja configurado)</button>
 </div>
 
-<div id="calib-overlay">
-  <div class="ctl">CALIBRAR ESCALA</div>
-  <div class="csub">Posicione a camera de frente para a fita de 1m na parede. Siga os passos.</div>
-  <div id="calib-pts">1</div>
-  <div id="calib-instruction">Toque na ponta INFERIOR da fita</div>
-  <button id="btn-calib-next">PROXIMO PASSO</button>
-  <button id="btn-calib-cancel">CANCELAR</button>
-</div>
-
 <div id="calib-crosshair">
   <svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- horizontal line -->
-    <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,214,0,0.5)" stroke-width="0.3"/>
-    <!-- vertical line -->
-    <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(255,214,0,0.5)" stroke-width="0.3"/>
-    <!-- center circle -->
-    <circle cx="50" cy="50" r="3" fill="none" stroke="#ffd600" stroke-width="0.5"/>
+    <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,214,0,0.4)" stroke-width="0.3"/>
+    <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(255,214,0,0.4)" stroke-width="0.3"/>
+    <circle cx="50" cy="50" r="2.5" fill="none" stroke="#ffd600" stroke-width="0.6"/>
   </svg>
+</div>
+
+<div id="calib-label">
+  <span id="calib-label-text">Toque na ponta INFERIOR da fita</span>
 </div>
 
 <div id="ui">
@@ -307,82 +267,26 @@ function updateCalibBtn() {
   btnCalib.textContent = calibByTape ? 'RECALIBRAR' : 'CALIBRAR FITA';
 }
 
-// ── CALIBRAÇÃO PASSO A PASSO ────────────────────────────────────────────────
-// Fluxo:
-//   Passo 1 — overlay explica, botao "PROXIMO" esconde overlay e entra em modo toque
-//   Modo toque — overlay semitransparente, indicador animado, usuario toca na tela
-//   Ponto 1 registrado — volta overlay para passo 2
-//   Passo 2 — botao "PROXIMO" para ponto 2
-//   Ponto 2 registrado — calcula e finaliza
+// ── CALIBRAÇÃO ───────────────────────────────────────────────────────────────
+// Fluxo: setup modal → câmera limpa + crosshair + label → 2 toques → feito
 
 let calibTaps = [];
-let calibStep = 0;   // 0=inativo, 1=aguardando toque 1, 2=aguardando toque 2
-
-const calibPtsEl    = document.getElementById('calib-pts');
-const calibInstr    = document.getElementById('calib-instruction');
-const btnCalibNext  = document.getElementById('btn-calib-next');
 const calibCrosshair = document.getElementById('calib-crosshair');
-
-
-// setup modal
-const setupModal = document.getElementById('setup-modal');
-document.getElementById('btn-setup-ok').addEventListener('click', () => {
-  setupModal.classList.remove('show');
-  startCalib();
-});
-document.getElementById('btn-setup-skip').addEventListener('click', () => {
-  setupModal.classList.remove('show');
-  startCalib();
-});
-// abre o modal de instrucao antes de calibrar
-btnCalib.addEventListener('click', () => {
-  document.body.classList.add('calibrating');
-  setupModal.classList.add('show');
-});
-document.getElementById('btn-calib-cancel').addEventListener('click', cancelCalib);
-btnCalibNext.addEventListener('click', goToTapMode);
+const calibLabel     = document.getElementById('calib-label');
+const calibLabelText = document.getElementById('calib-label-text');
 
 function startCalib() {
   calibTaps = [];
-  calibStep = 0;
-  showStep(1);
-  calibOverlay.classList.add('show');
-  calibOverlay.classList.remove('tap-mode');
   document.body.classList.add('calibrating');
-}
-
-function showStep(step) {
-  calibStep = step;
-  calibPtsEl.textContent = String(step);
-  btnCalibNext.style.display = 'block';
-  calibCrosshair.classList.remove('show');
-
-  if (step === 1) {
-    calibInstr.textContent = 'Toque na ponta INFERIOR da fita (nivel do chao)';
-  
-  } else {
-    calibInstr.textContent = 'Agora toque na ponta SUPERIOR da fita (1 metro acima)';
-  
-  }
-}
-
-function goToTapMode() {
-  calibTapMode = true;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  calibOverlay.classList.add('tap-mode');
-  btnCalibNext.style.display = 'none';
   calibCrosshair.classList.add('show');
-  setZoom(2.5);  // zoom in para facilitar o toque na fita
-  // registra o toque na tela inteira (nao no canvas espelhado)
+  calibLabel.classList.add('show');
+  calibLabelText.textContent = 'Toque na ponta INFERIOR da fita (nivel do chao)';
   document.addEventListener('touchstart', onCalibTap, { once: true, passive: false });
   document.addEventListener('click',      onCalibTap, { once: true });
 }
 
 function onCalibTap(e) {
   e.preventDefault();
-  calibCrosshair.classList.remove('show');
-
-  // pega coordenadas do toque
   let clientX, clientY;
   if (e.touches && e.touches.length > 0) {
     clientX = e.touches[0].clientX;
@@ -392,47 +296,25 @@ function onCalibTap(e) {
     clientY = e.clientY;
   }
 
-  // converte para coordenadas do canvas (corrigindo espelhamento CSS scaleX(-1))
   const rect = canvas.getBoundingClientRect();
-  const xDisp = clientX - rect.left;
-  const yDisp = clientY - rect.top;
-  // canvas nao esta espelhado
-  const xCv = (xDisp / rect.width)  * canvas.width;
-  const yCv = (yDisp / rect.height) * canvas.height;
-
+  const xCv = (clientX - rect.left) / rect.width  * canvas.width;
+  const yCv = (clientY - rect.top)  / rect.height * canvas.height;
   calibTaps.push({ xCv, yCv });
 
-  // dot de feedback
-  const xDot = xCv;
-  const yDot = yCv;
-  ctx.save();
-  ctx.fillStyle = '#ffd600';
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(xDot, yDot, 16, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
-  ctx.fillText(String(calibTaps.length), xDot, yDot + 5);
-  ctx.restore();
-
-  calibTapMode = false;
-  setZoom(1);  // volta zoom ao normal entre os toques
   if (calibTaps.length === 1) {
-    calibOverlay.classList.remove('tap-mode');
-    showStep(2);
+    calibLabelText.textContent = 'Agora toque na ponta SUPERIOR da fita (1 metro acima)';
+    document.addEventListener('touchstart', onCalibTap, { once: true, passive: false });
+    document.addEventListener('click',      onCalibTap, { once: true });
   } else {
     finishCalib();
   }
 }
 
 function cancelCalib() {
-  calibTapMode = false;
   setZoom(1);
   document.body.classList.remove('calibrating');
-  calibOverlay.classList.remove('show');
-  calibOverlay.classList.remove('tap-mode');
   calibCrosshair.classList.remove('show');
-  calibStep = 0;
+  calibLabel.classList.remove('show');
   calibTaps = [];
   document.removeEventListener('touchstart', onCalibTap);
   document.removeEventListener('click',      onCalibTap);
@@ -441,24 +323,23 @@ function cancelCalib() {
 function finishCalib() {
   setZoom(1);
   document.body.classList.remove('calibrating');
-  calibOverlay.classList.remove('show');
-  calibOverlay.classList.remove('tap-mode');
+  calibCrosshair.classList.remove('show');
+  calibLabel.classList.remove('show');
 
   const dy = Math.abs(calibTaps[1].yCv - calibTaps[0].yCv);
   pxPerCm = dy / 100;
   calibByTape = true;
-
   calibLine = {
     y0: Math.max(calibTaps[0].yCv, calibTaps[1].yCv),
     y1: Math.min(calibTaps[0].yCv, calibTaps[1].yCv),
   };
-
   saveCalib(pxPerCm);
   updateCalibBtn();
   logCalib.textContent = 'calib: fita (' + pxPerCm.toFixed(2) + ' px/cm)';
   status.textContent = 'Calibrado! 1m = ' + Math.round(dy) + 'px. Pode medir.';
   setPhase('ready');
 }
+
 
 // fallback: estima px/cm pela proporcao corporal
 function estimatePxPerCm(lm) {
